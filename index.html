@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IA Selector · adaptative.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --bg2: #111111;
+  --bg3: #1a1a1a;
+  --bg4: #222222;
+  --bg5: #2a2a2a;
+  --fg: #f0f0f0;
+  --fg2: #aaaaaa;
+  --fg3: #666666;
+  --azure: #3B82F6;
+  --azure-dim: rgba(59,130,246,0.15);
+  --azure-hover: #2563EB;
+  --red: #dc2626;
+  --green: #16a34a;
+  --amber: #d97706;
+  --border: rgba(255,255,255,0.08);
+  --border-az: rgba(59,130,246,0.4);
+  --radius: 8px;
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
+a{color:var(--azure);text-decoration:none}
+button{cursor:pointer;font-family:var(--font)}
+
+/* ── LAYOUT ── */
+#app{min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--bg);border-bottom:1px solid var(--border);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-size:15px;font-weight:700;letter-spacing:-0.02em;color:var(--fg)}
+.logo .dot{color:var(--red)}
+.step-label{font-size:12px;color:var(--fg3);font-family:var(--mono)}
+
+.progress-wrap{background:var(--bg);border-bottom:1px solid var(--border);padding:12px 24px}
+.progress-steps{display:flex;gap:8px;max-width:600px;margin:0 auto}
+.ps{flex:1;height:3px;border-radius:2px;background:var(--bg5);transition:background .3s}
+.ps.done{background:var(--azure)}
+.ps.active{background:var(--azure);opacity:.5}
+
+.page{flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 24px 80px}
+.page-inner{width:100%;max-width:720px}
+
+/* ── WELCOME ── */
+.welcome{display:flex;flex-direction:column;align-items:center;text-align:center;padding:60px 24px;gap:24px}
+.welcome .logo-big{font-size:24px;font-weight:700;letter-spacing:-0.02em}
+.welcome .logo-big .dot{color:var(--red)}
+.welcome h1{font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1.2}
+.welcome h1 em{font-style:normal;color:var(--azure)}
+.welcome p{font-size:15px;color:var(--fg2);max-width:480px;line-height:1.7}
+.code-tag{font-family:var(--mono);font-size:12px;color:var(--azure);background:var(--azure-dim);padding:4px 10px;border-radius:4px;display:inline-block;margin-bottom:8px}
+.pills{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.pill{font-size:11px;color:var(--fg3);background:var(--bg3);border:1px solid var(--border);padding:3px 10px;border-radius:100px;font-family:var(--mono)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:var(--radius);font-size:14px;font-weight:500;border:none;transition:all .15s}
+.btn-primary{background:var(--azure);color:#fff}
+.btn-primary:hover{background:var(--azure-hover)}
+.btn-secondary{background:var(--bg3);color:var(--fg);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--bg4)}
+.btn-lg{padding:13px 28px;font-size:15px;border-radius:10px}
+.btn-ghost{background:transparent;color:var(--fg2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg3)}
+
+/* ── NAV BAR ── */
+.nav-bar{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);padding:12px 24px;display:flex;justify-content:space-between;align-items:center;z-index:100}
+.nav-bar .count{font-size:12px;color:var(--fg3);font-family:var(--mono)}
+
+/* ── SECTION HEADER ── */
+.section-hd{margin-bottom:28px}
+.section-hd h2{font-size:22px;font-weight:700;letter-spacing:-0.02em}
+.section-hd p{font-size:14px;color:var(--fg2);margin-top:6px}
+
+/* ── FORM ── */
+.form-group{margin-bottom:20px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--fg2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.form-group input,.form-group select{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--fg);font-family:var(--font);font-size:14px;padding:10px 14px;border-radius:var(--radius);outline:none;transition:border .2s}
+.form-group input:focus,.form-group select:focus{border-color:var(--azure)}
+.form-group select option{background:var(--bg3)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* ── SECTOR GRID ── */
+.sector-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+.sector-card{background:var(--bg3);border:2px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;cursor:pointer;transition:all .15s}
+.sector-card:hover{border-color:var(--fg3)}
+.sector-card.selected{border-color:var(--azure);background:var(--azure-dim)}
+.sector-card .code{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--azure);margin-bottom:4px}
+.sector-card .name{font-size:12px;color:var(--fg2)}
+
+/* ── CATEGORY BLOCKS ── */
+.cat-block{margin-bottom:20px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.cat-hd{background:var(--bg2);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.cat-hd:hover{background:var(--bg3)}
+.cat-hd h3{font-size:13px;font-weight:600;color:var(--fg)}
+.cat-hd .cat-meta{display:flex;align-items:center;gap:10px}
+.cat-badge{font-size:11px;font-family:var(--mono);color:var(--fg3)}
+.cat-count{font-size:11px;font-family:var(--mono);color:var(--azure)}
+.chevron{font-size:12px;color:var(--fg3);transition:transform .2s}
+.chevron.open{transform:rotate(180deg)}
+.cat-body{padding:8px 0}
+
+/* ── ITEM ROWS ── */
+.item-row{display:flex;align-items:flex-start;gap:12px;padding:8px 16px;cursor:pointer;transition:background .1s}
+.item-row:hover{background:var(--bg3)}
+.item-row.selected{background:var(--azure-dim)}
+.item-row input[type="checkbox"]{width:16px;height:16px;accent-color:var(--azure);flex-shrink:0;margin-top:2px;cursor:pointer}
+.item-content{flex:1}
+.item-id{font-family:var(--mono);font-size:10px;color:var(--fg3);display:block}
+.item-name{font-size:13px;color:var(--fg);line-height:1.4}
+.item-badges{display:flex;gap:6px;margin-top:4px;flex-wrap:wrap}
+.badge{font-size:10px;padding:2px 6px;border-radius:4px;font-family:var(--mono);font-weight:500}
+.badge-shallow{background:rgba(16,185,129,0.15);color:#10b981}
+.badge-deep{background:rgba(139,92,246,0.15);color:#8b5cf6}
+.badge-mixta{background:rgba(245,158,11,0.15);color:#f59e0b}
+.badge-cac{background:rgba(220,38,38,0.15);color:#ef4444}
+.badge-sector{background:var(--bg4);color:var(--fg3)}
+
+/* ── TOOLS GRID ── */
+.tools-group{margin-bottom:24px}
+.tools-group h3{font-size:12px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.tools-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.tool-card{background:var(--bg3);border:2px solid var(--border);border-radius:var(--radius);padding:10px 12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px}
+.tool-card:hover{border-color:var(--fg3)}
+.tool-card.selected{border-color:var(--azure);background:var(--azure-dim)}
+.tool-id{font-family:var(--mono);font-size:10px;color:var(--fg3);flex-shrink:0}
+.tool-name{font-size:12px;color:var(--fg);font-weight:500}
+
+/* ── NATURE STEP ── */
+.nature-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:20px}
+.nature-card h3{font-size:15px;font-weight:600;margin-bottom:20px}
+.slider-wrap{margin:8px 0 16px}
+.slider-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--fg3);margin-bottom:6px;font-family:var(--mono)}
+input[type="range"]{width:100%;accent-color:var(--azure);height:6px}
+.nature-val{text-align:center;font-family:var(--mono);font-size:13px;color:var(--azure);margin-top:8px}
+.radio-group{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.radio-opt{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:2px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all .15s}
+.radio-opt:hover{border-color:var(--fg3)}
+.radio-opt.selected{border-color:var(--azure);background:var(--azure-dim)}
+.radio-opt input{accent-color:var(--azure);width:15px;height:15px}
+.radio-opt span{font-size:13px;color:var(--fg)}
+.q-label{font-size:13px;font-weight:500;color:var(--fg2);margin-bottom:10px;display:block}
+
+/* ── RESULTS ── */
+.results-hero{background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:24px}
+.results-hero .r-name{font-size:22px;font-weight:700;letter-spacing:-0.02em}
+.results-hero .r-meta{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap}
+.r-meta-item{font-size:12px;color:var(--fg3);display:flex;align-items:center;gap:4px;font-family:var(--mono)}
+.r-meta-item strong{color:var(--fg2)}
+.nature-gauge{display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);padding:4px 12px;border-radius:100px;font-size:12px;color:var(--fg2);margin-top:12px;font-family:var(--mono)}
+
+.results-section{margin-bottom:32px}
+.results-section h3{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.results-section h3 .tag{font-size:11px;font-family:var(--mono);color:var(--fg3);font-weight:400}
+
+.agent-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px;transition:border .2s}
+.agent-card:hover{border-color:var(--border-az)}
+.agent-card.cac-card{border-left:3px solid var(--red)}
+.agent-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.agent-info{flex:1}
+.agent-rank{font-family:var(--mono);font-size:11px;color:var(--fg3);margin-bottom:2px}
+.agent-name{font-size:15px;font-weight:600;letter-spacing:-0.01em}
+.agent-purp{font-size:12px;color:var(--fg2);margin-top:3px}
+.agent-badges{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.score-wrap{text-align:right;flex-shrink:0}
+.score-num{font-size:22px;font-weight:700;color:var(--azure);font-family:var(--mono)}
+.score-lbl{font-size:10px;color:var(--fg3)}
+.score-bar-wrap{margin-top:10px;background:var(--bg4);border-radius:4px;height:4px;overflow:hidden}
+.score-bar{height:4px;background:var(--azure);border-radius:4px;transition:width .5s ease}
+.cac-warning{background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);border-radius:6px;padding:8px 12px;margin-top:10px;font-size:11px;color:#ef4444;display:flex;align-items:flex-start;gap:6px}
+.cac-warning strong{font-weight:600}
+
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px}
+.sum-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.sum-card .sum-num{font-size:28px;font-weight:700;color:var(--azure);font-family:var(--mono);letter-spacing:-0.03em}
+.sum-card .sum-lbl{font-size:12px;color:var(--fg2);margin-top:2px}
+.sum-card .sum-sub{font-size:11px;color:var(--fg3);margin-top:6px;font-family:var(--mono)}
+
+.detail-list{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.detail-row{display:flex;align-items:flex-start;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border)}
+.detail-row:last-child{border-bottom:none}
+.detail-id{font-family:var(--mono);font-size:10px;color:var(--azure);width:72px;flex-shrink:0;padding-top:2px}
+.detail-name{font-size:12px;color:var(--fg);flex:1}
+.detail-badge{font-size:10px;font-family:var(--mono);color:var(--fg3);padding:2px 6px;background:var(--bg4);border-radius:4px;flex-shrink:0}
+
+.empty-state{text-align:center;padding:32px;color:var(--fg3);font-size:13px}
+
+.print-btn{display:flex;align-items:center;gap:8px;margin:0 auto;padding:12px 24px}
+@media print{.topbar,.progress-wrap,.nav-bar,.print-btn{display:none!important}.page{padding:20px}.agent-card,.detail-list{page-break-inside:avoid}}
+
+/* ── MISC ── */
+.divider{height:1px;background:var(--border);margin:24px 0}
+.tip{font-size:12px;color:var(--fg3);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:16px;font-family:var(--mono)}
+.tip strong{color:var(--fg2)}
+.select-all-row{padding:8px 16px;display:flex;justify-content:flex-end}
+.select-all-row button{background:none;border:none;font-size:11px;color:var(--azure);font-family:var(--mono);cursor:pointer}
+.select-all-row button:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+
+const SECTORS = [
+  {code:'MKT',name:'Mercadeo'},
+  {code:'PUB',name:'Publicidad'},
+  {code:'COM',name:'Comunicaciones'},
+  {code:'RET',name:'Retail'},
+  {code:'CRC',name:'Comercio'},
+  {code:'TRA',name:'Transporte'},
+  {code:'EDU',name:'Educación'},
+  {code:'CON',name:'Consultoría'},
+];
+
+const FAMILIES = {
+  F01:'Dirección y Estrategia',F02:'Operaciones',
+  F03:'Marketing y Creatividad',F04:'Administración y Finanzas',
+  F05:'Comercial y Ventas',F06:'Personas y Cultura',
+  F07:'Conocimiento y Documentación',F08:'Compliance y Riesgo',
+  F09:'Productividad Personal',F10:'Datos y Análisis'
+};
+
+const CATEGORIES = [
+  {id:'CAT-01',name:'Reportes y Análisis Recurrentes'},
+  {id:'CAT-02',name:'Comunicaciones y Mensajes'},
+  {id:'CAT-03',name:'Presentaciones y Narrativa Visual'},
+  {id:'CAT-04',name:'Gestión de Reuniones'},
+  {id:'CAT-05',name:'Toma de Decisiones'},
+  {id:'CAT-06',name:'Gestión de Conocimiento y Documentos'},
+  {id:'CAT-07',name:'Objetivos y Seguimiento'},
+  {id:'CAT-08',name:'Creatividad y Producción de Contenido'},
+  {id:'CAT-09',name:'Estrategia y Planeación'},
+  {id:'CAT-10',name:'Gestión de Clientes y Relaciones'},
+  {id:'CAT-11',name:'Casos Sectoriales y Emergentes'},
+];
+
+const FLOW_GROUPS = [
+  {id:'FG01',name:'Análisis'},
+  {id:'FG02',name:'Comunicación'},
+  {id:'FG03',name:'Documentación'},
+  {id:'FG04',name:'Decisión'},
+  {id:'FG05',name:'Seguimiento'},
+  {id:'FG06',name:'Producción Creativa'},
+  {id:'FG07',name:'Investigación de Mercado'},
+  {id:'FG08',name:'Estrategia y Planeación'},
+  {id:'FG09',name:'Experiencia y Operación Sectorial'},
+  {id:'FG10',name:'Nuevos · Addendum v0.2'},
+];
+
+const TOOL_GROUPS = [
+  {id:'TG01',name:'Microsoft 365'},
+  {id:'TG02',name:'IAs y Asistentes'},
+  {id:'TG03',name:'Diseño y Presentaciones'},
+  {id:'TG04',name:'Productividad y Voz'},
+  {id:'TG05',name:'Comunicación'},
+  {id:'TG06',name:'Datos y Código'},
+];
+
+// Helper: sectors(['ALL']) → true for any; specific codes
+const A = (id,n,fam,nat,cac,purp,secs,cs,fs,ts)=>({id,n,fam,nat,cac,purp,secs,cs,fs,ts});
+const C = (id,cat,n,nat,secs)=>({id,cat,n,nat,secs});
+const F = (id,grp,n,secs)=>({id,grp,n,secs});
+const T = (id,grp,n)=>({id,grp,n});
+
+// ── CASES (85) ──
+const CASES=[
+  // CAT-01
+  C('CSO-001','CAT-01','Consolidar reportes mensuales de varias fuentes en uno solo','S',['ALL']),
+  C('CSO-002','CAT-01','Comparar resultados de un período contra el anterior','S',['ALL']),
+  C('CSO-003','CAT-01','Detectar variaciones o anomalías en datos operativos','D',['ALL']),
+  C('CSO-004','CAT-01','Preparar el cierre financiero del mes con narrativa ejecutiva','D',['ALL']),
+  C('CSO-005','CAT-01','Generar dashboards o resúmenes visuales de KPIs','S',['ALL']),
+  C('CSO-006','CAT-01','Armar reportes de avance para junta, comité o sponsor','D',['ALL']),
+  // CAT-02
+  C('CSO-007','CAT-02','Redactar comunicados internos (cambios, anuncios, novedades)','S',['ALL']),
+  C('CSO-008','CAT-02','Escribir emails complejos que requieren tono y estrategia','D',['ALL']),
+  C('CSO-009','CAT-02','Adaptar un mismo mensaje a distintos canales','S',['ALL']),
+  C('CSO-010','CAT-02','Crear contenido para redes sociales corporativas o personales','S',['ALL']),
+  C('CSO-011','CAT-02','Responder solicitudes formales (clientes, reguladores, junta)','D',['ALL']),
+  C('CSO-012','CAT-02','Preparar newsletters periódicas para equipos o audiencias externas','S',['ALL']),
+  // CAT-03
+  C('CSO-013','CAT-03','Armar presentaciones ejecutivas desde cero','D',['ALL']),
+  C('CSO-014','CAT-03','Convertir datos en una historia visual que persuada','D',['ALL']),
+  C('CSO-015','CAT-03','Crear pitches comerciales para marcas o clientes','D',['MKT','PUB','CON','CRC']),
+  C('CSO-016','CAT-03','Diseñar mood boards o dirección creativa para campañas','D',['MKT','PUB','COM']),
+  C('CSO-017','CAT-03','Preparar material para junta directiva o comité','D',['ALL']),
+  C('CSO-018','CAT-03','Pulir y mejorar presentaciones que ya existen','S',['ALL']),
+  // CAT-04
+  C('CSO-019','CAT-04','Preparar agenda y material previo para reuniones','S',['ALL']),
+  C('CSO-020','CAT-04','Tomar notas y generar actas durante reuniones','S',['ALL']),
+  C('CSO-021','CAT-04','Extraer compromisos y hacer seguimiento post-reunión','S',['ALL']),
+  C('CSO-022','CAT-04','Sintetizar reuniones largas en resúmenes accionables','S',['ALL']),
+  C('CSO-023','CAT-04','Preparar contexto histórico antes de retomar un tema','D',['ALL']),
+  // CAT-05
+  C('CSO-024','CAT-05','Comparar opciones (proveedores, propuestas, inversiones)','D',['ALL']),
+  C('CSO-025','CAT-05','Modelar escenarios what-if antes de tomar una decisión','D',['ALL']),
+  C('CSO-026','CAT-05','Preparar argumentarios para defender o cuestionar una propuesta','D',['ALL']),
+  C('CSO-027','CAT-05','Evaluar riesgos antes de lanzar un proyecto o iniciativa','D',['ALL']),
+  C('CSO-028','CAT-05','Documentar decisiones tomadas con su razonamiento','S',['ALL']),
+  // CAT-06
+  C('CSO-029','CAT-06','Organizar y encontrar documentos en SharePoint u OneDrive','S',['ALL']),
+  C('CSO-030','CAT-06','Crear manuales, procedimientos o guías operativas','D',['ALL']),
+  C('CSO-031','CAT-06','Investigar un tema nuevo rápidamente con fuentes confiables','D',['ALL']),
+  C('CSO-032','CAT-06','Traducir información técnica a lenguaje ejecutivo (o viceversa)','D',['ALL']),
+  C('CSO-033','CAT-06','Mantener actualizada una base de conocimiento del área','S',['ALL']),
+  // CAT-07
+  C('CSO-034','CAT-07','Definir o reformular objetivos claros y medibles (OKRs, SMART, BSC)','D',['ALL']),
+  C('CSO-035','CAT-07','Hacer seguimiento periódico del avance de metas del equipo','S',['ALL']),
+  C('CSO-036','CAT-07','Preparar revisiones trimestrales con datos y narrativa','D',['ALL']),
+  C('CSO-037','CAT-07','Diseñar tableros de control o scorecards para el área','D',['ALL']),
+  C('CSO-038','CAT-07','Medir hábitos, rituales o rutinas que no se capturan en cifras','S',['ALL']),
+  C('CSO-039','CAT-07','Cascadear objetivos estratégicos a nivel de equipo y persona','D',['ALL']),
+  // CAT-08
+  C('CSO-040','CAT-08','Generar ideas para campañas, eventos o activaciones desde cero','D',['MKT','PUB','COM','RET']),
+  C('CSO-041','CAT-08','Crear storytelling para marcas, productos o servicios','D',['MKT','PUB','COM']),
+  C('CSO-042','CAT-08','Construir briefs creativos a partir de conversaciones vagas','D',['MKT','PUB','CON']),
+  C('CSO-043','CAT-08','Diseñar conceptos de experiencias (eventos, lanzamientos)','D',['MKT','PUB','RET','COM']),
+  C('CSO-044','CAT-08','Producir contenido editorial largo (artículos, papers, reportes)','D',['ALL']),
+  C('CSO-045','CAT-08','Generar variantes creativas de un mismo concepto para audiencias','D',['MKT','PUB','COM']),
+  C('CSO-046','CAT-08','Crear guion de video, podcast o serie de contenido','D',['MKT','PUB','COM','EDU']),
+  C('CSO-047','CAT-08','Diseñar calendario editorial con formatos, temas y distribución','S',['MKT','PUB','COM']),
+  C('CSO-048','CAT-08','Conceptualizar mecánica de juego o gamificación para engagement','D',['MKT','RET','EDU']),
+  C('CSO-049','CAT-08','Producir idea de negocio nueva: propuesta de valor + modelo','D',['ALL']),
+  // CAT-09
+  C('CSO-050','CAT-09','Analizar el portafolio completo y priorizar iniciativas','D',['ALL']),
+  C('CSO-051','CAT-09','Construir o revisar la planeación estratégica del área','D',['ALL']),
+  C('CSO-052','CAT-09','Mapear stakeholders y diseñar estrategias de relacionamiento','D',['ALL']),
+  C('CSO-053','CAT-09','Evaluar oportunidades de mercado, nuevas categorías o formatos','D',['ALL']),
+  C('CSO-054','CAT-09','Diseñar escenarios de largo plazo (3, 5, 10 años)','D',['ALL']),
+  C('CSO-055','CAT-09','Preparar insumos estratégicos para junta o comité','D',['ALL']),
+  C('CSO-056','CAT-09','Hacer benchmark competitivo contra players del sector','D',['ALL']),
+  // CAT-10
+  C('CSO-057','CAT-10','Preparar propuestas comerciales para prospectos','D',['CON','MKT','PUB','CRC']),
+  C('CSO-058','CAT-10','Gestionar comunicaciones recurrentes con clientes clave','S',['ALL']),
+  C('CSO-059','CAT-10','Analizar satisfacción, quejas o requerimientos de clientes','D',['RET','CRC','TRA','EDU']),
+  C('CSO-060','CAT-10','Preparar negociaciones o renovaciones de contratos','D',['ALL']),
+  C('CSO-061','CAT-10','Investigar prospectos potenciales para ampliar la cartera','D',['CON','CRC','MKT','PUB']),
+  C('CSO-062','CAT-10','Segmentar clientes y diseñar experiencias por perfil','D',['RET','CRC','MKT','EDU']),
+  C('CSO-063','CAT-10','Dar seguimiento al pipeline comercial','S',['ALL']),
+  C('CSO-064','CAT-10','Diseñar propuestas de valor para clientes estratégicos','D',['ALL']),
+  // CAT-11 (sectoriales + addendum)
+  C('CSO-065','CAT-11','Optimizar rutas o asignar recursos logísticos','D',['TRA','CRC','RET']),
+  C('CSO-066','CAT-11','Forecasting de demanda o inventario','D',['RET','CRC','TRA']),
+  C('CSO-067','CAT-11','Análisis de pricing y elasticidad','D',['RET','CRC']),
+  C('CSO-068','CAT-11','Diseñar currículo, syllabus o unidad de aprendizaje','D',['EDU']),
+  C('CSO-069','CAT-11','Evaluar evidencias de aprendizaje y retroalimentar','D',['EDU']),
+  C('CSO-070','CAT-11','Personalizar experiencia de aprendizaje por estudiante','D',['EDU']),
+  C('CSO-071','CAT-11','Diseñar plan de medios y mix de canales','D',['MKT','PUB']),
+  C('CSO-072','CAT-11','Análisis de campaña publicitaria post-lanzamiento','D',['MKT','PUB']),
+  C('CSO-073','CAT-11','Monitorear reputación y conversación en redes','S',['COM','MKT','PUB']),
+  C('CSO-074','CAT-11','Diseñar experiencia en piso (visual merchandising, recorrido)','D',['RET']),
+  C('CSO-075','CAT-11','Gestionar incidentes operativos en tiempo real','S',['TRA','RET','EDU']),
+  C('CSO-076','CAT-11','Resolución autónoma de consultas de cliente 24/7 (chat, email, WhatsApp, voz)','M',['ALL']),
+  C('CSO-077','CAT-11','Detección y manejo de fraude transaccional o de devoluciones','D',['RET','CRC']),
+  C('CSO-078','CAT-11','Enriquecimiento automatizado de catálogo de productos','M',['RET','CRC']),
+  C('CSO-079','CAT-11','Predicción de fallos mecánicos con pre-autorización de mantenimiento','D',['TRA','RET','EDU']),
+  C('CSO-080','CAT-11','Optimización autónoma de campañas multi-canal en tiempo real','D',['MKT','PUB']),
+  C('CSO-081','CAT-11','Detección temprana de señales de churn y disparo de retención','D',['MKT','RET','CRC','EDU']),
+  C('CSO-082','CAT-11','Procesamiento autónomo de contratos/facturas/formularios con validación','D',['ALL']),
+  C('CSO-083','CAT-11','Atribución multitoque de conversiones (cross-channel)','D',['MKT','PUB','CRC']),
+  C('CSO-084','CAT-11','Generación dinámica de variantes creativas (Dynamic Creative Optimization)','M',['MKT','PUB']),
+  C('CSO-085','CAT-11','Optimización para motores de IA generativa (GEO)','D',['MKT','PUB','COM']),
+];
+
+// ── FLOWS (68) ──
+const FLOWS=[
+  // FG01 Análisis
+  F('FLW-001','FG01','Análisis mensual de desempeño con KPIs → reporte ejecutivo de 1 página',['ALL']),
+  F('FLW-002','FG01','Comparativo período vs período → diagnóstico de variaciones con narrativa',['ALL']),
+  F('FLW-003','FG01','Anomalías en data operativa → alerta + plan de acción',['ALL']),
+  F('FLW-004','FG01','Cierre de mes financiero → consolidación + narrativa ejecutiva',['ALL']),
+  F('FLW-005','FG01','Benchmark contra mercado → posicionamiento competitivo',['ALL']),
+  F('FLW-006','FG01','Análisis de tráfico de visitantes → patrones + predicciones',['RET','MKT','EDU']),
+  F('FLW-007','FG01','Consolidación de reportes multi-área → síntesis para comité',['ALL']),
+  // FG02 Comunicación
+  F('FLW-008','FG02','Comunicado interno de cambio organizacional → 4 versiones por audiencia',['ALL']),
+  F('FLW-009','FG02','Pieza para LinkedIn personal o corporativo → redacción + estructura',['ALL']),
+  F('FLW-010','FG02','Newsletter periódica para equipo o clientes → curaduría + redacción',['ALL']),
+  F('FLW-011','FG02','Respuesta a solicitud compleja (cliente, junta, regulador)',['ALL']),
+  F('FLW-012','FG02','Adaptación de un mensaje maestro a 4 canales simultáneos',['MKT','PUB','COM']),
+  F('FLW-013','FG02','Guion de conversación difícil → preparación + argumentario',['ALL']),
+  // FG03 Documentación
+  F('FLW-014','FG03','Acta de reunión → compromisos → seguimiento automático',['ALL']),
+  F('FLW-015','FG03','Manual o procedimiento operativo desde cero',['ALL']),
+  F('FLW-016','FG03','Brief de proyecto → propuesta formal → presentación ejecutiva',['ALL']),
+  F('FLW-017','FG03','Memoria histórica de proceso o iniciativa',['ALL']),
+  F('FLW-018','FG03','Tablero de gobernanza periódica',['ALL']),
+  F('FLW-019','FG03','Contrato o documento legal → resumen de cláusulas críticas',['ALL']),
+  // FG04 Decisión
+  F('FLW-020','FG04','Comité de inversión: opciones → análisis multi-criterio → recomendación',['ALL']),
+  F('FLW-021','FG04','Selección de proveedor: criterios → cotizaciones → comparativo',['ALL']),
+  F('FLW-022','FG04','Priorización de iniciativas: backlog → matriz impacto/esfuerzo',['ALL']),
+  F('FLW-023','FG04','Resolución de conflicto operativo entre áreas',['ALL']),
+  F('FLW-024','FG04','Aprobación de iniciativa → análisis de riesgo + escenarios',['ALL']),
+  // FG05 Seguimiento
+  F('FLW-025','FG05','Diseño y cascada de OKRs trimestrales por área',['ALL']),
+  F('FLW-026','FG05','Revisión de OKRs a mitad de período → diagnóstico + ajuste',['ALL']),
+  F('FLW-027','FG05','Ciclo mensual de KPIs → alerta de desviaciones',['ALL']),
+  F('FLW-028','FG05','Tracking semanal de proyecto crítico → avance + riesgos + bloqueos',['ALL']),
+  F('FLW-029','FG05','Pulso de clima organizacional periódico → síntesis + plan de respuesta',['ALL']),
+  // FG06 Producción Creativa
+  F('FLW-030','FG06','Pitch comercial para marca cliente → narrativa + estructura + cierre',['MKT','PUB','CON']),
+  F('FLW-031','FG06','Concepto de evento o activación → idea central + mecánica + experiencia',['MKT','PUB','RET','COM']),
+  F('FLW-032','FG06','Storyboard de campaña multi-canal → arco narrativo + piezas por canal',['MKT','PUB']),
+  F('FLW-033','FG06','Mood board y dirección creativa → referencias + paleta + tono visual',['MKT','PUB','COM']),
+  F('FLW-034','FG06','Pieza editorial larga (artículo, paper, report de tendencias)',['ALL']),
+  F('FLW-035','FG06','Concepto de experiencia inmersiva → flujo de usuario + momentos clave',['MKT','PUB','RET']),
+  F('FLW-036','FG06','Guion de video o podcast → estructura + tensión + llamada a acción',['MKT','PUB','COM','EDU']),
+  F('FLW-037','FG06','Brief creativo desde conversación vaga → intención + entregables + fechas',['MKT','PUB','CON']),
+  // FG07 Investigación de Mercado
+  F('FLW-038','FG07','Mapeo de oportunidades de clientes en una industria',['ALL']),
+  F('FLW-039','FG07','Análisis de industria objetivo → estructura + tendencias + factores críticos',['ALL']),
+  F('FLW-040','FG07','Investigación de consumidor → perfiles + motivaciones + barreras',['MKT','PUB','RET','CRC','EDU']),
+  F('FLW-041','FG07','Benchmarking de competidores → posicionamiento + fortalezas',['ALL']),
+  F('FLW-042','FG07','Análisis de tendencias de mercadeo y publicidad',['MKT','PUB','COM']),
+  F('FLW-043','FG07','Investigación de experiencia de usuario (UX) → journey + fricciones',['RET','EDU','MKT','COM']),
+  F('FLW-044','FG07','Mapeo de ecosistema de entretenimiento → actores + modelos',['MKT','PUB']),
+  F('FLW-045','FG07','Inteligencia competitiva periódica → señales débiles + movimientos',['ALL']),
+  F('FLW-046','FG07','Análisis de audiencias digitales → comportamiento + contenidos',['MKT','PUB','COM']),
+  F('FLW-047','FG07','Exploración de modelo de negocio nuevo → viabilidad + riesgos',['ALL']),
+  F('FLW-048','FG07','Investigación de partners o aliados estratégicos',['ALL']),
+  F('FLW-049','FG07','Diagnóstico de proceso interno roto → causa raíz + recomendaciones',['ALL']),
+  F('FLW-050','FG07','Análisis regulatorio sectorial → marco + implicaciones + riesgos',['ALL']),
+  // FG08 Estrategia y Planeación
+  F('FLW-051','FG08','Planeación estratégica de área → visión + objetivos + iniciativas + métricas',['ALL']),
+  F('FLW-052','FG08','Análisis de portafolio de proyectos → priorización + recursos',['ALL']),
+  F('FLW-053','FG08','Diseño de escenarios de largo plazo (optimista, base, pesimista)',['ALL']),
+  F('FLW-054','FG08','Mapa de stakeholders → identificación + influencia + relacionamiento',['ALL']),
+  F('FLW-055','FG08','Briefing para junta directiva → síntesis ejecutiva + recomendaciones',['ALL']),
+  // FG09 Experiencia y Operación Sectorial
+  F('FLW-056','FG09','Diseño de experiencia en piso (pop-up, activación, juego)',['RET','MKT','PUB']),
+  F('FLW-057','FG09','Mapa de viaje del cliente o estudiante → touch points + fricciones',['RET','CRC','EDU']),
+  F('FLW-058','FG09','Diseño de programa de fidelización → beneficios + mecánica + comunicación',['RET','CRC','MKT']),
+  F('FLW-059','FG09','Optimización de ruta logística → asignación + costos + on-time',['TRA','CRC','RET']),
+  F('FLW-060','FG09','Diseño instruccional → objetivos + actividades + evaluación',['EDU']),
+  F('FLW-061','FG09','Plan de medios → audiencia + canales + presupuesto + KPIs',['MKT','PUB']),
+  F('FLW-062','FG09','Diagnóstico de cliente para propuesta consultoría → discovery + scope',['CON']),
+  // FG10 Nuevos
+  F('FLW-063','FG10','Cliente consulta → triaje automático → resolución autónoma o escalamiento con contexto completo',['ALL']),
+  F('FLW-064','FG10','Procesamiento documental: entra → extracción → validación → flag de excepciones → workflow',['ALL']),
+  F('FLW-065','FG10','Onboarding autónomo de cliente nuevo (digital end-to-end con escalamiento en momentos clave)',['RET','CRC','EDU','CON']),
+  F('FLW-066','FG10','Optimización continua de campaña: launch → monitor → reasignación → ajuste → cierre con learnings',['MKT','PUB']),
+  F('FLW-067','FG10','Incidente operativo: detección → notificación → acción → seguimiento → cierre documentado',['TRA','RET','EDU']),
+  F('FLW-068','FG10','Personalización continua de experiencia de aprendizaje por estudiante con ajuste de pacing',['EDU']),
+];
+
+// ── TOOLS (35) ──
+const TOOLS=[
+  T('TOL-001','TG01','Word'),T('TOL-002','TG01','Excel'),
+  T('TOL-003','TG01','PowerPoint'),T('TOL-004','TG01','Outlook'),
+  T('TOL-005','TG01','Teams'),T('TOL-006','TG01','SharePoint'),
+  T('TOL-007','TG01','OneDrive'),T('TOL-008','TG01','Copilot Studio'),
+  T('TOL-009','TG01','Power Automate'),T('TOL-010','TG01','Power BI'),
+  T('TOL-011','TG02','ChatGPT (gratis/Plus)'),T('TOL-012','TG02','ChatGPT Pro/Enterprise'),
+  T('TOL-013','TG02','Claude'),T('TOL-014','TG02','Gemini'),
+  T('TOL-015','TG02','Perplexity'),T('TOL-016','TG02','Copilot Chat'),
+  T('TOL-017','TG02','Grok'),T('TOL-018','TG02','Mistral'),
+  T('TOL-019','TG03','Canva'),T('TOL-020','TG03','Gamma'),
+  T('TOL-021','TG03','Figma'),T('TOL-022','TG03','Adobe Creative Cloud'),
+  T('TOL-023','TG04','Wispr Flow'),T('TOL-024','TG04','Dictado nativo del sistema'),
+  T('TOL-025','TG04','Notion'),T('TOL-026','TG04','Trello / Asana / Monday'),
+  T('TOL-027','TG04','Todoist'),T('TOL-028','TG04','Taskade'),
+  T('TOL-029','TG05','WhatsApp Business'),T('TOL-030','TG05','Slack'),
+  T('TOL-031','TG05','Zoom'),
+  T('TOL-032','TG06','Python'),T('TOL-033','TG06','Google Sheets'),
+  T('TOL-034','TG06','Herramientas BI/Analytics'),T('TOL-035','TG06','Make / n8n / Zapier'),
+];
+
+// ── AGENTS (95) ──
+// A(id, name, family, nature[D/S/M], cara_a_cliente, purpose, sectors[], cases[], flows[], tools[])
+const AGENTS=[
+  // F01
+  A('AGT-001','Estratega de Portafolio','F01','D',false,'Decisiones cross-proyecto, comparativos, priorización',['ALL'],['CSO-024','CSO-025','CSO-050','CSO-052'],['FLW-020','FLW-022','FLW-052'],['TOL-013','TOL-002','TOL-003']),
+  A('AGT-002','Pulso Ejecutivo','F01','M',false,'Sintetiza KPIs operativos en formato ejecutivo de 1 página',['ALL'],['CSO-001','CSO-005','CSO-006'],['FLW-001','FLW-007'],['TOL-013','TOL-010','TOL-002']),
+  A('AGT-003','Cazador de Señales','F01','D',false,'Monitorea tendencias de industria y mercado',['ALL'],['CSO-053','CSO-056'],['FLW-045','FLW-042'],['TOL-015','TOL-013','TOL-014']),
+  A('AGT-004','Briefing Director','F01','D',false,'Prepara material para junta directiva y comités',['ALL'],['CSO-017','CSO-055'],['FLW-055'],['TOL-013','TOL-003','TOL-020']),
+  A('AGT-005','Mapa de Stakeholders','F01','D',false,'Gestiona relaciones con socios clave y aliados estratégicos',['ALL'],['CSO-052','CSO-064'],['FLW-054'],['TOL-013','TOL-007']),
+  A('AGT-006','Sintetizador de Comités','F01','S',false,'Convierte actas largas en decisiones accionables y seguimientos',['ALL'],['CSO-021','CSO-022','CSO-028'],['FLW-014'],['TOL-013','TOL-005','TOL-001']),
+  A('AGT-007','Diseñador de OKRs Estratégicos','F01','D',false,'Descompone visión y objetivos anuales en Key Results medibles',['ALL'],['CSO-034','CSO-039'],['FLW-025','FLW-051'],['TOL-013','TOL-001']),
+  A('AGT-008','Mapeador de Balanced Scorecard','F01','D',false,'Construye scorecard equilibrado: financiero, cliente, proceso, aprendizaje',['ALL'],['CSO-037','CSO-051'],['FLW-051'],['TOL-013','TOL-002','TOL-010']),
+  // F02
+  A('AGT-009','Pulso Operativo','F02','M',false,'Análisis de métricas clave, proyecciones, comparativos por área',['ALL'],['CSO-001','CSO-002','CSO-003'],['FLW-001','FLW-002','FLW-003'],['TOL-013','TOL-010','TOL-002']),
+  A('AGT-010','Coordinador de Procesos','F02','D',false,'Inventario de procesos, cuellos de botella, oportunidades de mejora',['ALL'],['CSO-030','CSO-027'],['FLW-049'],['TOL-013','TOL-001','TOL-009']),
+  A('AGT-011','Maestro de Mantenimiento','F02','S',false,'Programación de mantenimientos, alertas, históricos de equipos',['RET','TRA','EDU'],['CSO-035','CSO-038'],['FLW-028'],['TOL-013','TOL-002','TOL-009']),
+  A('AGT-012','Guardián de Calidad','F02','M',false,'Análisis de incidentes, patrones, reportes de calidad',['ALL'],['CSO-003','CSO-027'],['FLW-003'],['TOL-013','TOL-002','TOL-010']),
+  A('AGT-013','Diseñador de Experiencia','F02','D',false,'Diseña experiencias y comunicaciones por segmento de clientes',['RET','CRC','EDU','MKT'],['CSO-062','CSO-043'],['FLW-035','FLW-043','FLW-057'],['TOL-013','TOL-019']),
+  A('AGT-014','Coordinador de Clientes','F02','S',true,'Comunicaciones, respuestas a requerimientos, soporte a clientes clave',['ALL'],['CSO-058','CSO-011'],['FLW-011'],['TOL-013','TOL-004','TOL-029']),
+  A('AGT-015','Operador de Eventos','F02','M',false,'Logística de activaciones, eventos propios y co-creados',['MKT','PUB','RET','EDU'],['CSO-043','CSO-040'],['FLW-031'],['TOL-013','TOL-026','TOL-009']),
+  A('AGT-016','Vigía de Servicios','F02','S',false,'Monitoreo de infraestructura, recursos y servicios compartidos',['RET','TRA','EDU'],['CSO-035','CSO-005'],['FLW-027'],['TOL-013','TOL-010']),
+  A('AGT-017','Optimizador de Rutas','F02','D',false,'Asignación, ruteo y optimización logística',['TRA','CRC','RET'],['CSO-065'],['FLW-059'],['TOL-013','TOL-002','TOL-032']),
+  A('AGT-018','Vigía de Inventario','F02','D',false,'Forecasting de demanda, niveles óptimos, alertas de stock',['RET','CRC','TRA'],['CSO-066'],['FLW-002','FLW-003'],['TOL-013','TOL-002','TOL-010']),
+  // F03
+  A('AGT-019','Pitch Master','F03','D',false,'Genera pitches comerciales para clientes y aliados potenciales',['MKT','PUB','CON','CRC'],['CSO-015','CSO-057'],['FLW-030'],['TOL-013','TOL-003','TOL-020']),
+  A('AGT-020','Arquitecto de Marca','F03','D',false,'Personalidades de marca, arquetipos, manifiestos, tonos de voz',['MKT','PUB','COM'],['CSO-041','CSO-049'],['FLW-033'],['TOL-013']),
+  A('AGT-021','Storyteller','F03','D',false,'Narrativas para campañas, activaciones y contenido',['MKT','PUB','COM','EDU'],['CSO-041','CSO-045','CSO-046'],['FLW-032','FLW-036'],['TOL-013']),
+  A('AGT-022','Mood Curator','F03','D',false,'Mood boards, paletas, dirección creativa visual',['MKT','PUB','COM'],['CSO-016'],['FLW-033'],['TOL-013','TOL-019','TOL-022']),
+  A('AGT-023','Brief Builder','F03','D',false,'Convierte conversación con cliente en brief creativo estructurado',['MKT','PUB','CON'],['CSO-042'],['FLW-037'],['TOL-013','TOL-001']),
+  A('AGT-024','Editor de Presentaciones','F03','S',false,'Pule pitches y propuestas visuales — narrativa + estructura',['ALL'],['CSO-018'],['FLW-030'],['TOL-013','TOL-003','TOL-020']),
+  A('AGT-025','Investigador de Tendencias','F03','D',false,'Pulso cultural y de consumo para informar campañas',['MKT','PUB','COM'],['CSO-053'],['FLW-042','FLW-044'],['TOL-013','TOL-015']),
+  A('AGT-026','Director de Activación','F03','D',false,'Diseño conceptual de experiencias, eventos, lanzamientos',['MKT','PUB','RET','COM'],['CSO-040','CSO-043'],['FLW-031','FLW-035','FLW-056'],['TOL-013','TOL-019']),
+  A('AGT-027','Media Planner','F03','D',false,'Diseño de plan de medios y mix de canales con KPIs',['MKT','PUB'],['CSO-071'],['FLW-061'],['TOL-013','TOL-002','TOL-010']),
+  A('AGT-028','Analista de Campaña','F03','D',false,'Análisis post-lanzamiento de campañas, learnings y optimización',['MKT','PUB'],['CSO-072'],['FLW-005','FLW-046'],['TOL-013','TOL-010','TOL-002']),
+  // F04
+  A('AGT-029','Reportero Financiero','F04','M',false,'Consolida reportes mensuales por área y por entidad',['ALL'],['CSO-001','CSO-004'],['FLW-001','FLW-004','FLW-007'],['TOL-013','TOL-002','TOL-010']),
+  A('AGT-030','Conciliador Asistente','F04','S',false,'Apoya conciliaciones y cruces de información financiera',['ALL'],['CSO-001','CSO-003'],['FLW-004'],['TOL-013','TOL-002']),
+  A('AGT-031','Tesorero Asistente','F04','M',false,'Flujos de caja, proyecciones, alertas de liquidez',['ALL'],['CSO-002','CSO-003'],['FLW-002','FLW-027'],['TOL-013','TOL-002']),
+  A('AGT-032','Cartera Inteligente','F04','D',false,'Análisis de cartera, segmentación de clientes, alertas tempranas',['ALL'],['CSO-003','CSO-062'],['FLW-003'],['TOL-013','TOL-002','TOL-010']),
+  A('AGT-033','Auditor de Costos','F04','D',false,'Revisa gastos, detecta anomalías, identifica sobrecostos',['ALL'],['CSO-003','CSO-024'],['FLW-003'],['TOL-013','TOL-002']),
+  A('AGT-034','Procuro de Proveedores','F04','M',false,'Compara cotizaciones, evalúa propuestas, prepara comparativos',['ALL'],['CSO-024'],['FLW-021'],['TOL-013','TOL-002','TOL-001']),
+  A('AGT-035','Cazador de Sensibilidades','F04','D',false,'Escenarios financieros what-if, modelado de variables',['ALL'],['CSO-025','CSO-027'],['FLW-024','FLW-053'],['TOL-013','TOL-002']),
+  A('AGT-036','Vigía de Presupuesto','F04','S',false,'Tracking de ejecución vs plan, alertas de desviación',['ALL'],['CSO-002','CSO-035'],['FLW-027'],['TOL-013','TOL-002','TOL-010']),
+  A('AGT-037','Estratega de Pricing','F04','D',false,'Análisis de pricing, elasticidad, escenarios',['RET','CRC'],['CSO-067'],['FLW-053'],['TOL-013','TOL-002']),
+  // F05
+  A('AGT-038','Generador de Propuestas','F05','D',false,'Crea propuestas comerciales adaptadas a cada prospecto',['CON','MKT','PUB','CRC','EDU'],['CSO-057','CSO-064'],['FLW-016','FLW-030'],['TOL-013','TOL-001','TOL-020']),
+  A('AGT-039','Negociador Asistente','F05','D',false,'Preparación para negociaciones — argumentarios, escenarios',['ALL'],['CSO-026','CSO-060'],['FLW-013'],['TOL-013','TOL-001']),
+  A('AGT-040','Renovador de Contratos','F05','M',false,'Análisis y preparación de renovaciones, comparativos de mercado',['ALL'],['CSO-024','CSO-060'],['FLW-019','FLW-021'],['TOL-013','TOL-001','TOL-002']),
+  A('AGT-041','Investigador de Mercado','F05','D',false,'Investigación de clientes potenciales y oportunidades',['ALL'],['CSO-061','CSO-053'],['FLW-038','FLW-040','FLW-048'],['TOL-013','TOL-015']),
+  A('AGT-042','Estratega de Oferta','F05','D',false,'Análisis y diseño de la oferta óptima de productos/servicios',['ALL'],['CSO-049','CSO-064'],['FLW-047','FLW-053'],['TOL-013','TOL-002']),
+  A('AGT-043','Diseñador de Propuesta Comercial','F05','D',false,'Convierte un brief en propuesta lista para enviar',['CON','MKT','PUB','CRC'],['CSO-057'],['FLW-016','FLW-030'],['TOL-013','TOL-003','TOL-020']),
+  A('AGT-044','Tracker de Pipeline','F05','S',false,'Seguimiento del pipeline comercial, alertas de etapas estancadas',['ALL'],['CSO-063'],['FLW-028'],['TOL-013','TOL-002','TOL-026']),
+  // F06
+  A('AGT-045','Onboarding Buddy','F06','M',true,'Acompañamiento estructurado a nuevos colaboradores',['ALL'],['CSO-030'],['FLW-015'],['TOL-013','TOL-001','TOL-005']),
+  A('AGT-046','Encuestador de Clima','F06','D',false,'Diseño y análisis de pulsos organizacionales',['ALL'],['CSO-038'],['FLW-029'],['TOL-013','TOL-002']),
+  A('AGT-047','Comunicador Interno','F06','S',true,'Newsletters, comunicados de cultura, mensajes de liderazgo',['ALL'],['CSO-007','CSO-009','CSO-012'],['FLW-008','FLW-010'],['TOL-013','TOL-001']),
+  A('AGT-048','Diseñador de Rituales','F06','D',false,'Rituales, ceremonias, eventos internos coherentes con la cultura',['ALL'],['CSO-040','CSO-043'],['FLW-031'],['TOL-013']),
+  A('AGT-049','Coach de Líder','F06','D',true,'Soporte a líderes en conversaciones difíciles, feedback, gestión',['ALL'],['CSO-008','CSO-026'],['FLW-013'],['TOL-013']),
+  A('AGT-050','Diseñador de OKRs de Equipo','F06','D',false,'Cascada de OKRs estratégicos a nivel de equipo y persona',['ALL'],['CSO-034','CSO-039'],['FLW-025'],['TOL-013','TOL-001']),
+  A('AGT-051','Tracker de Hábitos y Rituales','F06','S',false,'Mide ejecución de rutinas individuales o de equipo',['ALL'],['CSO-035','CSO-038'],['FLW-027'],['TOL-013','TOL-002']),
+  A('AGT-052','Diseñador Pedagógico','F06','D',false,'Diseño instruccional: objetivos, actividades, evaluación',['EDU'],['CSO-068','CSO-069','CSO-070'],['FLW-060'],['TOL-013','TOL-001','TOL-020']),
+  // F07
+  A('AGT-053','Bibliotecario Corporativo','F07','S',false,'Organización, curaduría, mantenimiento de la base de conocimiento',['ALL'],['CSO-029','CSO-033'],['FLW-017'],['TOL-013','TOL-006','TOL-007']),
+  A('AGT-054','Escriba de Comités','F07','S',false,'Actas, memorias, registros formales de reuniones',['ALL'],['CSO-020','CSO-021'],['FLW-014'],['TOL-013','TOL-005','TOL-001']),
+  A('AGT-055','Memorioso Histórico','F07','D',false,'Recupera contexto de proyectos pasados, decisiones, aprendizajes',['ALL'],['CSO-023','CSO-028'],['FLW-017'],['TOL-013','TOL-006']),
+  A('AGT-056','Traductor Técnico↔Ejecutivo','F07','M',false,'Pasa de jerga técnica a lenguaje C-suite y viceversa',['ALL'],['CSO-032'],['FLW-016'],['TOL-013']),
+  A('AGT-057','Investigador Corporativo','F07','D',false,'Research interno + externo con fuentes verificadas',['ALL'],['CSO-031','CSO-044'],['FLW-038','FLW-039'],['TOL-013','TOL-015']),
+  A('AGT-058','Curador de Tendencias Sectoriales','F07','D',false,'Señales emergentes específicas del sector',['ALL'],['CSO-053','CSO-056'],['FLW-042','FLW-045'],['TOL-013','TOL-015']),
+  // F08
+  A('AGT-059','Centinela de Cumplimiento','F08','D',false,'Cumplimiento normativo y gestión de riesgo',['ALL'],['CSO-027'],['FLW-050'],['TOL-013','TOL-001']),
+  A('AGT-060','Guardián de Datos Personales','F08','D',false,'Tratamiento de datos personales bajo normativa vigente',['ALL'],['CSO-027'],['FLW-050'],['TOL-013','TOL-001']),
+  A('AGT-061','Auditor de Contratos','F08','D',false,'Revisa contratos contra estándares y cláusulas críticas',['ALL'],['CSO-024','CSO-027'],['FLW-019'],['TOL-013','TOL-001']),
+  A('AGT-062','Cazador de Riesgos Operativos','F08','D',false,'Identifica riesgos en procesos antes de que escalen',['ALL'],['CSO-027'],['FLW-024','FLW-049'],['TOL-013','TOL-001']),
+  A('AGT-063','Validador Regulatorio','F08','D',false,'Chequea normativa aplicable según tipo de operación',['ALL'],['CSO-027'],['FLW-050'],['TOL-013','TOL-001']),
+  // F09
+  A('AGT-064','Asistente de Agenda','F09','S',false,'Gestión de calendario, priorización de reuniones, bloqueos de foco',['ALL'],['CSO-019'],[],['TOL-013','TOL-004']),
+  A('AGT-065','Procesador de Bandeja','F09','S',false,'Triaje de email, borradores de respuesta, alertas',['ALL'],['CSO-007','CSO-008','CSO-011'],['FLW-011'],['TOL-013','TOL-004']),
+  A('AGT-066','Preparador de Reunión','F09','M',false,'Agendas, briefs, documentos previos, contexto histórico',['ALL'],['CSO-019','CSO-023'],['FLW-014'],['TOL-013','TOL-005']),
+  A('AGT-067','Síntesis Post-Reunión','F09','S',false,'Actas, compromisos, seguimientos, recordatorios',['ALL'],['CSO-020','CSO-021','CSO-022'],['FLW-014'],['TOL-013','TOL-005','TOL-001']),
+  A('AGT-068','Coach Personal','F09','D',true,'Productividad, foco, gestión de energía, hábitos',['ALL'],['CSO-038'],[],['TOL-013']),
+  A('AGT-069','Cazador de Goals SMART','F09','M',false,'Reformula objetivos vagos en metas específicas y medibles',['ALL'],['CSO-034'],['FLW-025'],['TOL-013']),
+  A('AGT-070','Diseñador de OKRs Personales','F09','M',false,'Cascada de OKRs a nivel individual',['ALL'],['CSO-034'],['FLW-025'],['TOL-013']),
+  // F10
+  A('AGT-071','Conversador de Excel','F10','M',false,'Extrae insights de hojas de cálculo en lenguaje natural',['ALL'],['CSO-001','CSO-002','CSO-003'],['FLW-002'],['TOL-013','TOL-002']),
+  A('AGT-072','Visualizador de Datos','F10','M',false,'Sugiere y construye gráficos según el dato y la audiencia',['ALL'],['CSO-005','CSO-014'],['FLW-001'],['TOL-013','TOL-002','TOL-010']),
+  A('AGT-073','Detective de Anomalías','F10','D',false,'Identifica patrones inusuales y outliers en data operativa',['ALL'],['CSO-003'],['FLW-003'],['TOL-013','TOL-002','TOL-010']),
+  A('AGT-074','Modelador de Escenarios','F10','D',false,'What-if, sensibilidades, escenarios optimista/base/pesimista',['ALL'],['CSO-025','CSO-027'],['FLW-024','FLW-053'],['TOL-013','TOL-002']),
+  A('AGT-075','Consolidador Multi-Fuente','F10','S',false,'Une data dispersa en reportes coherentes',['ALL'],['CSO-001'],['FLW-007'],['TOL-013','TOL-002','TOL-006']),
+  A('AGT-076','Comparador','F10','M',false,'Benchmarks lado a lado: períodos, áreas, opciones, proveedores',['ALL'],['CSO-002','CSO-024'],['FLW-002','FLW-005','FLW-021'],['TOL-013','TOL-002']),
+  A('AGT-077','Forecaster','F10','D',false,'Predicciones de demanda, tráfico, ingresos basadas en data histórica',['RET','CRC','TRA','EDU'],['CSO-066'],['FLW-003'],['TOL-013','TOL-002','TOL-032']),
+  A('AGT-078','Investigador UX','F10','D',false,'Mapeo de journey, fricciones, oportunidades de experiencia',['RET','EDU','MKT','COM'],['CSO-062','CSO-059'],['FLW-043','FLW-057'],['TOL-013','TOL-015','TOL-021']),
+  A('AGT-079','Analista de Reputación','F10','S',false,'Monitoreo de conversación, sentimiento, señales en redes',['COM','MKT','PUB'],['CSO-073'],['FLW-045','FLW-046'],['TOL-013','TOL-015']),
+  A('AGT-080','Diagnóstico de Cliente Consultor','F10','D',false,'Discovery, levantamiento, scope inicial para propuestas consultoría',['CON'],['CSO-061','CSO-064'],['FLW-062'],['TOL-013','TOL-001']),
+  // Addendum
+  A('AGT-081','Agente de Servicio al Cliente 24/7','F02','M',true,'Atiende consultas en chat, WhatsApp, email y voz. Escala casos complejos.',['ALL'],['CSO-076','CSO-058','CSO-059'],['FLW-063'],['TOL-013','TOL-029','TOL-005']),
+  A('AGT-082','Despachador Inteligente','F02','D',false,'Monitorea GPS y cambios de orden, reasigna rutas y recalcula ETAs',['TRA','CRC','RET'],['CSO-065','CSO-075'],['FLW-059','FLW-067'],['TOL-013','TOL-032','TOL-035']),
+  A('AGT-083','Mantenimiento Predictivo','F02','D',false,'Predice fallos mecánicos 20-45 días antes, pre-autoriza reparaciones',['TRA','RET','EDU'],['CSO-079','CSO-003'],['FLW-003','FLW-067'],['TOL-013','TOL-032','TOL-010']),
+  A('AGT-084','Planificador de Turnos','F02','S',false,'Diseña turnos predecibles y justos basados en demanda esperada',['RET','TRA','EDU'],['CSO-075'],['FLW-067'],['TOL-013','TOL-002','TOL-026']),
+  A('AGT-085','Optimizador de Campaña en Tiempo Real','F03','D',false,'Pausa creativos sin rendimiento, reasigna budget a top performers',['MKT','PUB'],['CSO-080','CSO-083'],['FLW-066'],['TOL-013','TOL-010','TOL-002']),
+  A('AGT-086','Lead Scorer Predictivo','F03','D',false,'Evalúa leads combinando señales conductuales, firmográficas y de intent',['MKT','CRC','CON'],['CSO-063','CSO-061'],[],['TOL-013','TOL-010','TOL-002']),
+  A('AGT-087','Detector de Churn','F03','D',false,'Detecta señales de abandono semanas antes, dispara playbooks de retención',['MKT','RET','CRC','EDU'],['CSO-081','CSO-059'],['FLW-066'],['TOL-013','TOL-010','TOL-002']),
+  A('AGT-088','Optimizador GEO','F03','D',false,'Optimiza presencia para que la marca aparezca en respuestas de IA generativa',['MKT','PUB','COM'],['CSO-085'],['FLW-066'],['TOL-013','TOL-015','TOL-014']),
+  A('AGT-089','Asistente Virtual de Compra','F05','M',true,'Acompaña al comprador, recomienda productos en tiempo real, reduce fricción',['RET','CRC','EDU'],['CSO-076','CSO-062'],['FLW-063'],['TOL-013','TOL-029']),
+  A('AGT-090','Tutor Adaptativo','F06','D',true,'Personaliza pacing, formato y dificultad por estudiante en tiempo real',['EDU'],['CSO-070','CSO-068'],['FLW-060','FLW-068'],['TOL-013','TOL-001']),
+  A('AGT-091','Co-piloto de Aula','F06','M',false,'Asiste al docente durante la clase: sugiere actividades, monitorea engagement',['EDU'],['CSO-069'],['FLW-060'],['TOL-013','TOL-005','TOL-001']),
+  A('AGT-092','Moderador de Discusiones','F06','M',true,'Facilita discusiones grupales virtuales, identifica voces silenciadas',['EDU','COM'],['CSO-069'],['FLW-060'],['TOL-013','TOL-005']),
+  A('AGT-093','Detector de Fraude Transaccional','F08','D',false,'Detecta fraude en devoluciones distinguiendo VIPs de patrones sospechosos',['RET','CRC'],['CSO-077'],['FLW-067'],['TOL-013','TOL-010','TOL-002']),
+  A('AGT-094','Procesador de Documentos Empresariales','F08','D',false,'Extrae datos de contratos y facturas, valida contra reglas de negocio',['ALL'],['CSO-082','CSO-024'],['FLW-064','FLW-019'],['TOL-013','TOL-001','TOL-009']),
+  A('AGT-095','Enriquecedor de Catálogo','F10','M',false,'Extrae atributos de productos desde imágenes, automatiza categorización de SKUs',['RET','CRC'],['CSO-078'],['FLW-064'],['TOL-013','TOL-002','TOL-022']),
+];
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let st = {
+  step: 0,
+  profile: {nombre:'',rol:'',empresa:'',email:'',sector:''},
+  selCases: new Set(),
+  selFlows: new Set(),
+  selTools: new Set(),
+  nature: {slider:50,rutina:null,decisiones:null,analisis:null},
+  catOpen: {},
+  grpOpen: {},
+};
+
+// Pre-open first 3 categories by default
+CATEGORIES.forEach((c,i)=>{ st.catOpen[c.id] = i<3; });
+FLOW_GROUPS.forEach((g,i)=>{ st.grpOpen[g.id] = i<3; });
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+function sectorMatch(secs, sector){
+  if(!sector) return true;
+  return secs.includes('ALL') || secs.includes(sector);
+}
+
+function natureBadge(nat){
+  const map={D:'badge-deep',S:'badge-shallow',M:'badge-mixta'};
+  const lbl={D:'Deep',S:'Shallow',M:'Mixta'};
+  return `<span class="badge ${map[nat]||'badge-mixta'}">${lbl[nat]||nat}</span>`;
+}
+
+function getNatureScore(){
+  let s = st.nature.slider;
+  // Adjust based on extra questions
+  const r = st.nature.rutina;
+  if(r==='lt20') s = Math.min(100, s+10);
+  if(r==='gt60') s = Math.max(0, s-10);
+  const d = st.nature.decisiones;
+  if(d==='10plus') s = Math.min(100, s+8);
+  if(d==='1-2') s = Math.max(0, s-8);
+  const a = st.nature.analisis;
+  if(a==='siempre') s = Math.min(100, s+8);
+  if(a==='nunca') s = Math.max(0, s-8);
+  return Math.round(s);
+}
+
+function getNatureLabel(score){
+  if(score >= 65) return {lbl:'Deep Work',code:'D',color:'#8b5cf6'};
+  if(score <= 35) return {lbl:'Shallow Work',code:'S',color:'#10b981'};
+  return {lbl:'Trabajo Mixto',code:'M',color:'#f59e0b'};
+}
+
+function scoreAgents(){
+  const sec = st.profile.sector;
+  const natScore = getNatureScore();
+  const natInfo = getNatureLabel(natScore);
+  return AGENTS.map(ag=>{
+    // Hard filter: sector
+    if(!sectorMatch(ag.secs, sec)) return null;
+    let score = 0;
+    // Cases: +3
+    ag.cs.forEach(c=>{ if(st.selCases.has(c)) score+=3; });
+    // Flows: +2
+    ag.fs.forEach(f=>{ if(st.selFlows.has(f)) score+=2; });
+    // Tools: +1
+    ag.ts.forEach(t=>{ if(st.selTools.has(t)) score+=1; });
+    // Nature: +2
+    if(natInfo.code===ag.nat) score+=2;
+    else if(ag.nat==='M') score+=1;
+    return {...ag, score};
+  }).filter(Boolean).sort((a,b)=>b.score-a.score);
+}
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function go(step){
+  st.step = step;
+  window.scrollTo(0,0);
+  render();
+}
+
+// ═══════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════
+const APP = document.getElementById('app');
+
+function render(){
+  const steps = [null,'Perfil','Casos de uso','Flujos','Herramientas','Naturaleza','Resultados'];
+  const topbarHtml = `
+    <div class="topbar">
+      <span class="logo">adaptative<span class="dot">.</span></span>
+      <span class="step-label">${st.step>0&&st.step<6?`${st.step}/5 · ${steps[st.step]}`:st.step===6?'Tu Sistema':'IA Selector'}</span>
+    </div>`;
+
+  const progressHtml = st.step>0&&st.step<6 ? `
+    <div class="progress-wrap">
+      <div class="progress-steps" style="max-width:600px;margin:0 auto">
+        ${[1,2,3,4,5].map(i=>`<div class="ps ${i<st.step?'done':i===st.step?'active':''}"></div>`).join('')}
+      </div>
+    </div>` : '';
+
+  let bodyHtml = '';
+  switch(st.step){
+    case 0: bodyHtml = renderWelcome(); break;
+    case 1: bodyHtml = renderPerfil(); break;
+    case 2: bodyHtml = renderCasos(); break;
+    case 3: bodyHtml = renderFlujos(); break;
+    case 4: bodyHtml = renderHerramientas(); break;
+    case 5: bodyHtml = renderNaturaleza(); break;
+    case 6: bodyHtml = renderResultados(); break;
+  }
+
+  APP.innerHTML = topbarHtml + progressHtml + bodyHtml;
+  attachEvents();
+}
+
+// ── STEP 0: WELCOME ──
+function renderWelcome(){
+  return `<div class="page" style="justify-content:center;align-items:center;min-height:calc(100vh - 52px)">
+    <div class="welcome">
+      <div class="logo-big">adaptative<span class="dot">.</span></div>
+      <div class="code-tag">adaptative.selector.init()</div>
+      <h1>Tu <em>Sistema Operativo</em><br>de IA empieza aquí.</h1>
+      <p>5 pasos para mapear los flujos de trabajo donde la IA te genera más valor. El sistema analiza tu perfil y recomienda los agentes que instalar primero.</p>
+      <div class="pills">
+        <span class="pill">95 agentes</span>
+        <span class="pill">85 casos de uso</span>
+        <span class="pill">68 flujos</span>
+        <span class="pill">35 herramientas</span>
+        <span class="pill">8 sectores</span>
+      </div>
+      <button class="btn btn-primary btn-lg" onclick="go(1)">Empezar levantamiento →</button>
+    </div>
+  </div>`;
+}
+
+// ── STEP 1: PERFIL ──
+function renderPerfil(){
+  const p = st.profile;
+  const sectorGrid = SECTORS.map(s=>`
+    <div class="sector-card ${p.sector===s.code?'selected':''}" onclick="setSector('${s.code}')">
+      <div class="code">${s.code}</div>
+      <div class="name">${s.name}</div>
+    </div>`).join('');
+  return `<div class="page"><div class="page-inner">
+    <div class="section-hd">
+      <h2>Tu perfil</h2>
+      <p>Esta información personaliza todas las recomendaciones del sistema.</p>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="inp-nombre" value="${p.nombre}" placeholder="Ej: Carlos Rodríguez" oninput="st.profile.nombre=this.value">
+      </div>
+      <div class="form-group">
+        <label>Rol o cargo</label>
+        <input type="text" id="inp-rol" value="${p.rol}" placeholder="Ej: Director de Operaciones" oninput="st.profile.rol=this.value">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Empresa</label>
+        <input type="text" id="inp-empresa" value="${p.empresa}" placeholder="Ej: Grupo Éxito" oninput="st.profile.empresa=this.value">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="inp-email" value="${p.email}" placeholder="tu@empresa.com" oninput="st.profile.email=this.value">
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:8px">
+      <label>Sector</label>
+      <div class="sector-grid">${sectorGrid}</div>
+    </div>
+    <div class="nav-bar">
+      <div></div>
+      <button class="btn btn-primary" onclick="handleNext1()">Continuar → Casos de uso</button>
+    </div>
+  </div></div>`;
+}
+
+// ── STEP 2: CASOS ──
+function renderCasos(){
+  const sec = st.profile.sector;
+  let html = `<div class="page"><div class="page-inner">
+    <div class="section-hd">
+      <h2>Casos de uso</h2>
+      <p>Marca los que ocurren en tu día a día. ${sec?`Filtrado para <strong>${SECTORS.find(s=>s.code===sec).name}</strong>.`:''}</p>
+    </div>
+    <div class="tip"><strong>Tip:</strong> Puedes marcar todos los que apliquen. No hay límite.</div>`;
+
+  CATEGORIES.forEach(cat=>{
+    const items = CASES.filter(c=>c.cat===cat.id && sectorMatch(c.secs, sec));
+    if(!items.length) return;
+    const selCount = items.filter(c=>st.selCases.has(c.id)).length;
+    const open = st.catOpen[cat.id];
+    html += `
+    <div class="cat-block">
+      <div class="cat-hd" onclick="toggleCat('${cat.id}')">
+        <h3>${cat.name}</h3>
+        <div class="cat-meta">
+          ${selCount>0?`<span class="cat-count">${selCount} seleccionado${selCount>1?'s':''}</span>`:''}
+          <span class="cat-badge">${items.length}</span>
+          <span class="chevron ${open?'open':''}">▼</span>
+        </div>
+      </div>
+      ${open?`<div class="cat-body">
+        <div class="select-all-row">
+          <button onclick="selectAllCat('${cat.id}',${items.map(i=>`'${i.id}'`).join(',')})">Seleccionar todos</button>
+        </div>
+        ${items.map(c=>`
+        <div class="item-row ${st.selCases.has(c.id)?'selected':''}" onclick="toggleCase('${c.id}')">
+          <input type="checkbox" ${st.selCases.has(c.id)?'checked':''} onclick="event.stopPropagation();toggleCase('${c.id}')">
+          <div class="item-content">
+            <span class="item-id">${c.id}</span>
+            <span class="item-name">${c.n}</span>
+            <div class="item-badges">${natureBadge(c.nat)}</div>
+          </div>
+        </div>`).join('')}
+      </div>`:``}
+    </div>`;
+  });
+
+  const total = CASES.filter(c=>sectorMatch(c.secs,sec)).length;
+  html += `</div></div>
+  <div class="nav-bar">
+    <button class="btn btn-ghost" onclick="go(1)">← Atrás</button>
+    <span class="count">${st.selCases.size} / ${total} seleccionados</span>
+    <button class="btn btn-primary" onclick="go(3)">Continuar → Flujos</button>
+  </div>`;
+  return html;
+}
+
+// ── STEP 3: FLUJOS ──
+function renderFlujos(){
+  const sec = st.profile.sector;
+  let html = `<div class="page"><div class="page-inner">
+    <div class="section-hd">
+      <h2>Flujos de trabajo</h2>
+      <p>Marca los flujos que ya ejecutas o quieres instalar. ${sec?`Filtrado para <strong>${SECTORS.find(s=>s.code===sec).name}</strong>.`:''}</p>
+    </div>
+    <div class="tip"><strong>Tip:</strong> Los flujos son secuencias de pasos completas — desde el input hasta el entregable final.</div>`;
+
+  FLOW_GROUPS.forEach(grp=>{
+    const items = FLOWS.filter(f=>f.grp===grp.id && sectorMatch(f.secs, sec));
+    if(!items.length) return;
+    const selCount = items.filter(f=>st.selFlows.has(f.id)).length;
+    const open = st.grpOpen[grp.id];
+    html += `
+    <div class="cat-block">
+      <div class="cat-hd" onclick="toggleGrp('${grp.id}')">
+        <h3>${grp.name}</h3>
+        <div class="cat-meta">
+          ${selCount>0?`<span class="cat-count">${selCount} seleccionado${selCount>1?'s':''}</span>`:''}
+          <span class="cat-badge">${items.length}</span>
+          <span class="chevron ${open?'open':''}">▼</span>
+        </div>
+      </div>
+      ${open?`<div class="cat-body">
+        ${items.map(f=>`
+        <div class="item-row ${st.selFlows.has(f.id)?'selected':''}" onclick="toggleFlow('${f.id}')">
+          <input type="checkbox" ${st.selFlows.has(f.id)?'checked':''} onclick="event.stopPropagation();toggleFlow('${f.id}')">
+          <div class="item-content">
+            <span class="item-id">${f.id}</span>
+            <span class="item-name">${f.n}</span>
+          </div>
+        </div>`).join('')}
+      </div>`:``}
+    </div>`;
+  });
+
+  const total = FLOWS.filter(f=>sectorMatch(f.secs,sec)).length;
+  html += `</div></div>
+  <div class="nav-bar">
+    <button class="btn btn-ghost" onclick="go(2)">← Atrás</button>
+    <span class="count">${st.selFlows.size} / ${total} seleccionados</span>
+    <button class="btn btn-primary" onclick="go(4)">Continuar → Herramientas</button>
+  </div>`;
+  return html;
+}
+
+// ── STEP 4: HERRAMIENTAS ──
+function renderHerramientas(){
+  let html = `<div class="page"><div class="page-inner">
+    <div class="section-hd">
+      <h2>Herramientas que ya usas</h2>
+      <p>Esto le permite al sistema priorizar agentes compatibles con tu stack actual.</p>
+    </div>`;
+
+  TOOL_GROUPS.forEach(grp=>{
+    const items = TOOLS.filter(t=>t.grp===grp.id);
+    html += `<div class="tools-group">
+      <h3>${grp.name}</h3>
+      <div class="tools-grid">
+        ${items.map(t=>`
+        <div class="tool-card ${st.selTools.has(t.id)?'selected':''}" onclick="toggleTool('${t.id}')">
+          <span class="tool-id">${t.id}</span>
+          <span class="tool-name">${t.n}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+
+  html += `</div></div>
+  <div class="nav-bar">
+    <button class="btn btn-ghost" onclick="go(3)">← Atrás</button>
+    <span class="count">${st.selTools.size} / 35 seleccionadas</span>
+    <button class="btn btn-primary" onclick="go(5)">Continuar → Naturaleza del trabajo</button>
+  </div>`;
+  return html;
+}
+
+// ── STEP 5: NATURALEZA ──
+function renderNaturaleza(){
+  const {slider, rutina, decisiones, analisis} = st.nature;
+  const natScore = getNatureScore();
+  const natInfo = getNatureLabel(natScore);
+  const sliderLabel = slider<=30?'Principalmente Shallow':slider<=60?'Balance Shallow/Deep':'Principalmente Deep';
+
+  const rOpts = [
+    {v:'lt20',l:'Menos del 20% (casi todo es análisis o decisiones)'},
+    {v:'20-40',l:'Entre 20-40% (algo rutinario, resto analítico)'},
+    {v:'40-60',l:'Entre 40-60% (equilibrado)'},
+    {v:'gt60',l:'Más del 60% (trabajo mayormente rutinario)'},
+  ];
+  const dOpts = [
+    {v:'1-2',l:'1-2 decisiones complejas por semana'},
+    {v:'3-5',l:'3-5 decisiones complejas por semana'},
+    {v:'6-10',l:'6-10 decisiones complejas por semana'},
+    {v:'10plus',l:'Más de 10 decisiones complejas por semana'},
+  ];
+  const aOpts = [
+    {v:'siempre',l:'Sí, constantemente — síntesis de múltiples fuentes'},
+    {v:'frecuente',l:'Con frecuencia — varios contextos mezclados'},
+    {v:'aveces',l:'A veces — depende del proyecto'},
+    {v:'nunca',l:'Raramente — trabajo más de ejecución directa'},
+  ];
+
+  const mkRadio = (key, opts, sel) => opts.map(o=>`
+    <div class="radio-opt ${sel===o.v?'selected':''}" onclick="setNature('${key}','${o.v}')">
+      <input type="radio" name="${key}" value="${o.v}" ${sel===o.v?'checked':''}>
+      <span>${o.l}</span>
+    </div>`).join('');
+
+  return `<div class="page"><div class="page-inner">
+    <div class="section-hd">
+      <h2>La naturaleza de tu trabajo</h2>
+      <p>Esto afina qué agentes son más relevantes para tu perfil.</p>
+    </div>
+
+    <div class="nature-card">
+      <h3>¿Cómo es tu día a día?</h3>
+      <div class="slider-wrap">
+        <div class="slider-labels">
+          <span>← Shallow Work<br><small style="font-size:10px;color:var(--fg3)">Tareas cortas, rutinarias</small></span>
+          <span style="text-align:right">Deep Work →<br><small style="font-size:10px;color:var(--fg3)">Análisis, estrategia, creación</small></span>
+        </div>
+        <input type="range" min="0" max="100" value="${slider}"
+          oninput="st.nature.slider=parseInt(this.value);renderSliderLabel(this.value)">
+        <div class="nature-val" id="slider-label">${sliderLabel}</div>
+      </div>
+    </div>
+
+    <div class="nature-card">
+      <h3>¿Qué porcentaje de tu trabajo es rutinario?</h3>
+      <p style="font-size:12px;color:var(--fg3);margin-bottom:12px">Por rutinario entendemos: emails de respuesta, actualizaciones de estado, reportes repetitivos.</p>
+      <div class="radio-group">${mkRadio('rutina',rOpts,rutina)}</div>
+    </div>
+
+    <div class="nature-card">
+      <h3>¿Cuántas decisiones complejas tomas por semana?</h3>
+      <p style="font-size:12px;color:var(--fg3);margin-bottom:12px">Por compleja: decisiones que requieren análisis, trade-offs, múltiples variables.</p>
+      <div class="radio-group">${mkRadio('decisiones',dOpts,decisiones)}</div>
+    </div>
+
+    <div class="nature-card">
+      <h3>¿Tu trabajo principal requiere síntesis de múltiples fuentes complejas?</h3>
+      <p style="font-size:12px;color:var(--fg3);margin-bottom:12px">Por ejemplo: estudios, datos, conversaciones, contexto histórico, mercado.</p>
+      <div class="radio-group">${mkRadio('analisis',aOpts,analisis)}</div>
+    </div>
+
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;margin-bottom:80px">
+      <div style="font-size:12px;color:var(--fg3);margin-bottom:6px;font-family:var(--mono)">naturaleza_combinada =</div>
+      <div style="font-size:24px;font-weight:700;color:${natInfo.color}">${natInfo.lbl}</div>
+      <div style="font-size:11px;color:var(--fg3);margin-top:4px;font-family:var(--mono)">score: ${natScore}/100</div>
+    </div>
+
+  </div></div>
+  <div class="nav-bar">
+    <button class="btn btn-ghost" onclick="go(4)">← Atrás</button>
+    <span class="count">${natInfo.lbl} · ${natScore}/100</span>
+    <button class="btn btn-primary" onclick="go(6)">Ver mi sistema →</button>
+  </div>`;
+}
+
+// ── STEP 6: RESULTADOS ──
+function renderResultados(){
+  const p = st.profile;
+  const natScore = getNatureScore();
+  const natInfo = getNatureLabel(natScore);
+  const ranked = scoreAgents();
+  const top10 = ranked.slice(0,10);
+  const maxScore = top10[0]?.score||1;
+
+  const selCasesArr = CASES.filter(c=>st.selCases.has(c.id));
+  const selFlowsArr = FLOWS.filter(f=>st.selFlows.has(f.id));
+  const selToolsArr = TOOLS.filter(t=>st.selTools.has(t.id));
+
+  // Cases by category
+  const casesByCat = {};
+  selCasesArr.forEach(c=>{
+    if(!casesByCat[c.cat]) casesByCat[c.cat]=[];
+    casesByCat[c.cat].push(c);
+  });
+
+  // Flows by group
+  const flowsByGrp = {};
+  selFlowsArr.forEach(f=>{
+    if(!flowsByGrp[f.grp]) flowsByGrp[f.grp]=[];
+    flowsByGrp[f.grp].push(f);
+  });
+
+  const agentCards = top10.map((ag,i)=>`
+    <div class="agent-card ${ag.cac?'cac-card':''}">
+      <div class="agent-top">
+        <div class="agent-info">
+          <div class="agent-rank">#${i+1} · ${ag.id} · ${FAMILIES[ag.fam]}</div>
+          <div class="agent-name">${ag.n}</div>
+          <div class="agent-purp">${ag.purp}</div>
+          <div class="agent-badges">
+            ${natureBadge(ag.nat)}
+            ${ag.cac?'<span class="badge badge-cac">⚠ Cara-a-cliente</span>':''}
+          </div>
+        </div>
+        <div class="score-wrap">
+          <div class="score-num">${ag.score}</div>
+          <div class="score-lbl">puntos</div>
+        </div>
+      </div>
+      <div class="score-bar-wrap"><div class="score-bar" style="width:${Math.round(ag.score/maxScore*100)}%"></div></div>
+      ${ag.cac?`<div class="cac-warning"><span>⚠</span><div><strong>Agente cara-a-cliente.</strong> Requiere Niveles 3-4 de la Escalera de Adopción (workflows + orquestación). No solo Niveles 1-2. ¿Está tu organización lista?</div></div>`:''}
+    </div>`).join('');
+
+  const caseDetail = Object.keys(casesByCat).map(catId=>{
+    const cat = CATEGORIES.find(c=>c.id===catId);
+    const rows = casesByCat[catId].map(c=>`
+      <div class="detail-row">
+        <span class="detail-id">${c.id}</span>
+        <span class="detail-name">${c.n}</span>
+        <span class="detail-badge">${{S:'Shallow',D:'Deep',M:'Mixta'}[c.nat]}</span>
+      </div>`).join('');
+    return `<div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${cat?.name||catId}</div>
+      <div class="detail-list">${rows}</div>
+    </div>`;
+  }).join('');
+
+  const flowDetail = Object.keys(flowsByGrp).map(grpId=>{
+    const grp = FLOW_GROUPS.find(g=>g.id===grpId);
+    const rows = flowsByGrp[grpId].map(f=>`
+      <div class="detail-row">
+        <span class="detail-id">${f.id}</span>
+        <span class="detail-name">${f.n}</span>
+      </div>`).join('');
+    return `<div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${grp?.name||grpId}</div>
+      <div class="detail-list">${rows}</div>
+    </div>`;
+  }).join('');
+
+  const toolRows = selToolsArr.map(t=>`
+    <div class="detail-row">
+      <span class="detail-id">${t.id}</span>
+      <span class="detail-name">${t.n}</span>
+      <span class="detail-badge">${TOOL_GROUPS.find(g=>g.id===t.grp)?.name||''}</span>
+    </div>`).join('');
+
+  const sectorName = p.sector ? SECTORS.find(s=>s.code===p.sector)?.name : '—';
+
+  return `<div class="page"><div class="page-inner">
+
+    <div class="results-hero">
+      <div class="r-name">${p.nombre||'Tu Selección'}</div>
+      <div class="r-meta">
+        ${p.rol?`<span class="r-meta-item"><strong>${p.rol}</strong></span>`:''}
+        ${p.empresa?`<span class="r-meta-item">@ ${p.empresa}</span>`:''}
+        ${p.sector?`<span class="r-meta-item">Sector: <strong>${sectorName}</strong></span>`:''}
+        ${p.email?`<span class="r-meta-item">${p.email}</span>`:''}
+      </div>
+      <div class="nature-gauge">
+        <span style="color:${natInfo.color}">●</span>
+        <span>${natInfo.lbl}</span>
+        <span style="color:var(--fg3)">score ${natScore}/100</span>
+      </div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="sum-card">
+        <div class="sum-num">${st.selCases.size}</div>
+        <div class="sum-lbl">Casos de uso</div>
+        <div class="sum-sub">de 85 disponibles</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-num">${st.selFlows.size}</div>
+        <div class="sum-lbl">Flujos de trabajo</div>
+        <div class="sum-sub">de 68 disponibles</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-num">${st.selTools.size}</div>
+        <div class="sum-lbl">Herramientas</div>
+        <div class="sum-sub">de 35 en el stack</div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-num">${ranked.length}</div>
+        <div class="sum-lbl">Agentes compatibles</div>
+        <div class="sum-sub">con tu sector</div>
+      </div>
+    </div>
+
+    <div class="results-section">
+      <h3>Top 10 Agentes Recomendados <span class="tag">rankeados por puntaje · §8.3</span></h3>
+      <p style="font-size:12px;color:var(--fg3);margin-bottom:16px;font-family:var(--mono)">caso=+3pts · flujo=+2pts · herramienta=+1pt · naturaleza=+2pts</p>
+      ${top10.length ? agentCards : '<div class="empty-state">Selecciona al menos un caso o flujo para recibir recomendaciones.</div>'}
+    </div>
+
+    ${selCasesArr.length ? `<div class="results-section">
+      <h3>Casos de Uso Seleccionados <span class="tag">${st.selCases.size} casos</span></h3>
+      ${caseDetail}
+    </div>` : ''}
+
+    ${selFlowsArr.length ? `<div class="results-section">
+      <h3>Flujos de Trabajo Seleccionados <span class="tag">${st.selFlows.size} flujos</span></h3>
+      ${flowDetail}
+    </div>` : ''}
+
+    ${selToolsArr.length ? `<div class="results-section">
+      <h3>Herramientas en Tu Stack <span class="tag">${st.selTools.size} herramientas</span></h3>
+      <div class="detail-list">${toolRows||'<div class="empty-state">Ninguna seleccionada.</div>'}</div>
+    </div>` : ''}
+
+    <div class="divider"></div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:28px">
+      <div style="font-size:11px;font-family:var(--mono);color:var(--fg3);margin-bottom:14px;text-transform:uppercase;letter-spacing:.08em">Exportar resultados</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-ghost print-btn" onclick="window.print()" title="Genera un PDF desde el navegador">🖨 PDF</button>
+        <button class="btn btn-ghost" onclick="exportJSON()" title="Descarga todos tus resultados en JSON">{ } JSON</button>
+        <button class="btn btn-ghost" onclick="exportMarkdown()" title="Descarga un resumen legible en Markdown">↓ Markdown</button>
+        <button class="btn btn-primary" onclick="copyShareLink()" title="Copia enlace con tu sesión codificada" id="share-btn">⬡ Copiar enlace</button>
+      </div>
+      <div id="export-msg" style="display:none;font-size:12px;color:var(--green);margin-top:10px;font-family:var(--mono)"></div>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:40px">
+      <button class="btn btn-ghost" onclick="go(0)">← Nueva sesión</button>
+      <button class="btn btn-secondary" onclick="go(1)">✏ Editar perfil</button>
+    </div>
+
+    <div style="text-align:center;font-size:11px;color:var(--fg3);margin-bottom:40px;font-family:var(--mono)">
+      adaptative. · Matriz Maestra de Agentes IA · v0.2 · ${new Date().toLocaleDateString('es-CO')}
+    </div>
+
+  </div></div>`;
+}
+
+// ═══════════════════════════════════════════════
+// EVENT HANDLERS
+// ═══════════════════════════════════════════════
+function attachEvents(){
+  // Inputs are handled via oninput/onclick attributes inline
+}
+
+function setSector(code){
+  st.profile.sector = st.profile.sector===code ? '' : code;
+  render();
+}
+
+function handleNext1(){
+  const n = document.getElementById('inp-nombre');
+  const r = document.getElementById('inp-rol');
+  const e = document.getElementById('inp-empresa');
+  const em = document.getElementById('inp-email');
+  if(n) st.profile.nombre = n.value;
+  if(r) st.profile.rol = r.value;
+  if(e) st.profile.empresa = e.value;
+  if(em) st.profile.email = em.value;
+  go(2);
+}
+
+function toggleCase(id){
+  st.selCases.has(id) ? st.selCases.delete(id) : st.selCases.add(id);
+  render();
+}
+
+function toggleFlow(id){
+  st.selFlows.has(id) ? st.selFlows.delete(id) : st.selFlows.add(id);
+  render();
+}
+
+function toggleTool(id){
+  st.selTools.has(id) ? st.selTools.delete(id) : st.selTools.add(id);
+  render();
+}
+
+function toggleCat(id){
+  st.catOpen[id] = !st.catOpen[id];
+  render();
+}
+
+function toggleGrp(id){
+  st.grpOpen[id] = !st.grpOpen[id];
+  render();
+}
+
+function selectAllCat(catId, ...ids){
+  const items = CASES.filter(c=>c.cat===catId);
+  const allSel = items.every(c=>st.selCases.has(c.id));
+  items.forEach(c=> allSel ? st.selCases.delete(c.id) : st.selCases.add(c.id));
+  render();
+}
+
+function setNature(key, val){
+  st.nature[key] = st.nature[key]===val ? null : val;
+  render();
+}
+
+function renderSliderLabel(val){
+  const el = document.getElementById('slider-label');
+  st.nature.slider = parseInt(val);
+  if(el){
+    const v = parseInt(val);
+    el.textContent = v<=30?'Principalmente Shallow Work':v<=60?'Balance Shallow / Deep Work':'Principalmente Deep Work';
+    // Also update the combined score display live
+    const ns = getNatureScore();
+    const ni = getNatureLabel(ns);
+    const combo = document.getElementById('nature-combo');
+    if(combo){
+      combo.style.color = ni.color;
+      combo.textContent = ni.lbl + ` (${ns}/100)`;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT FUNCTIONS
+// ═══════════════════════════════════════════════
+
+function buildResultsPayload(){
+  const p = st.profile;
+  const natScore = getNatureScore();
+  const natInfo = getNatureLabel(natScore);
+  const ranked = scoreAgents();
+  const top10 = ranked.slice(0,10);
+  const selCasesArr = CASES.filter(c=>st.selCases.has(c.id));
+  const selFlowsArr = FLOWS.filter(f=>st.selFlows.has(f.id));
+  const selToolsArr = TOOLS.filter(t=>st.selTools.has(t.id));
+  return {
+    meta: {
+      generado: new Date().toISOString(),
+      version: 'adaptative. Matriz Maestra v0.2',
+      metodologia: 'Scoring §8.3 — caso=+3 · flujo=+2 · herramienta=+1 · naturaleza=+2'
+    },
+    perfil: {
+      nombre: p.nombre||'—',
+      rol: p.rol||'—',
+      empresa: p.empresa||'—',
+      sector: p.sector ? (SECTORS.find(s=>s.code===p.sector)?.name||p.sector) : '—',
+      email: p.email||'—'
+    },
+    naturaleza: {
+      score: natScore,
+      clasificacion: natInfo.lbl,
+      slider: st.nature.slider,
+      rutina: st.nature.rutina,
+      decisiones: st.nature.decisiones,
+      analisis: st.nature.analisis
+    },
+    seleccion: {
+      casos: selCasesArr.map(c=>({id:c.id, nombre:c.n, naturaleza:c.nat})),
+      flujos: selFlowsArr.map(f=>({id:f.id, nombre:f.n})),
+      herramientas: selToolsArr.map(t=>({id:t.id, nombre:t.n}))
+    },
+    top10_agentes: top10.map((ag,i)=>({
+      rank: i+1,
+      id: ag.id,
+      nombre: ag.n,
+      familia: FAMILIES[ag.fam]||ag.fam,
+      naturaleza: ag.nat,
+      cara_a_cliente: ag.cac,
+      proposito: ag.purp,
+      puntaje: ag.score
+    }))
+  };
+}
+
+function exportJSON(){
+  const data = buildResultsPayload();
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const nombre = (st.profile.empresa||'resultado').replace(/\s+/g,'-').toLowerCase();
+  a.href = url;
+  a.download = `ia-selector-${nombre}-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showExportMsg('JSON descargado correctamente.');
+}
+
+function exportMarkdown(){
+  const d = buildResultsPayload();
+  const p = d.perfil;
+  const nat = d.naturaleza;
+  const sel = d.seleccion;
+  const top = d.top10_agentes;
+
+  let md = `# IA Selector · adaptative.\n`;
+  md += `> ${d.meta.version} · ${new Date().toLocaleDateString('es-CO')}\n\n`;
+  md += `---\n\n`;
+  md += `## Perfil\n`;
+  md += `| Campo | Valor |\n|---|---|\n`;
+  md += `| Nombre | ${p.nombre} |\n`;
+  md += `| Rol | ${p.rol} |\n`;
+  md += `| Empresa | ${p.empresa} |\n`;
+  md += `| Sector | ${p.sector} |\n`;
+  if(p.email!=='—') md += `| Email | ${p.email} |\n`;
+  md += `\n## Naturaleza del Trabajo\n`;
+  md += `**Clasificación:** ${nat.clasificacion} (score ${nat.score}/100)\n\n`;
+
+  md += `## Top 10 Agentes Recomendados\n\n`;
+  top.forEach(ag=>{
+    md += `### #${ag.rank} · ${ag.nombre}\n`;
+    md += `- **ID:** ${ag.id}  |  **Familia:** ${ag.familia}  |  **Puntaje:** ${ag.puntaje}\n`;
+    md += `- **Naturaleza:** ${ag.naturaleza}  |  **Cara-a-cliente:** ${ag.cara_a_cliente?'⚠ Sí (requiere Niveles 3-4)':'No'}\n`;
+    md += `- **Propósito:** ${ag.proposito}\n\n`;
+  });
+
+  md += `## Casos de Uso Seleccionados (${sel.casos.length})\n`;
+  sel.casos.forEach(c=> md += `- \`${c.id}\` ${c.nombre}\n`);
+
+  md += `\n## Flujos Seleccionados (${sel.flujos.length})\n`;
+  sel.flujos.forEach(f=> md += `- \`${f.id}\` ${f.nombre}\n`);
+
+  md += `\n## Herramientas en Stack (${sel.herramientas.length})\n`;
+  sel.herramientas.forEach(t=> md += `- \`${t.id}\` ${t.nombre}\n`);
+
+  md += `\n---\n_Generado por adaptative. IA Selector · ${d.meta.metodologia}_\n`;
+
+  const blob = new Blob([md], {type:'text/markdown'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const nombre = (p.empresa||'resultado').replace(/\s+/g,'-').toLowerCase();
+  a.href = url;
+  a.download = `ia-selector-${nombre}-${new Date().toISOString().slice(0,10)}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showExportMsg('Markdown descargado correctamente.');
+}
+
+function copyShareLink(){
+  // Encode session state in URL hash for sharing
+  const payload = {
+    p: st.profile,
+    c: [...st.selCases],
+    f: [...st.selFlows],
+    t: [...st.selTools],
+    n: st.nature
+  };
+  try {
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    const url = window.location.href.split('#')[0] + '#s=' + encoded;
+    navigator.clipboard.writeText(url).then(()=>{
+      showExportMsg('Enlace copiado. Compártelo para recuperar esta sesión.');
+      const btn = document.getElementById('share-btn');
+      if(btn){ btn.textContent='✓ Copiado'; setTimeout(()=>{ btn.textContent='⬡ Copiar enlace'; },2000); }
+    }).catch(()=>{
+      prompt('Copia este enlace:', url);
+    });
+  } catch(e){ showExportMsg('Error al generar enlace.'); }
+}
+
+function showExportMsg(msg){
+  const el = document.getElementById('export-msg');
+  if(el){ el.style.display='block'; el.textContent='✓ '+msg; setTimeout(()=>{ el.style.display='none'; },3500); }
+}
+
+// Restore session from URL hash on load
+function tryRestoreSession(){
+  try {
+    const hash = window.location.hash;
+    if(hash.startsWith('#s=')){
+      const raw = decodeURIComponent(escape(atob(hash.slice(3))));
+      const saved = JSON.parse(raw);
+      if(saved.p) st.profile = saved.p;
+      if(saved.c) st.selCases = new Set(saved.c);
+      if(saved.f) st.selFlows = new Set(saved.f);
+      if(saved.t) st.selTools = new Set(saved.t);
+      if(saved.n) st.nature = {...st.nature,...saved.n};
+      st.step = 6; // jump to results
+      return true;
+    }
+  } catch(e){ /* ignore */ }
+  return false;
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+tryRestoreSession();
+render();
+</script>
+</body>
+</html>
