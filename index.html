@@ -203,6 +203,28 @@ input[type="range"]{width:100%;accent-color:var(--azure);height:6px}
 .select-all-row{padding:8px 16px;display:flex;justify-content:flex-end}
 .select-all-row button{background:none;border:none;font-size:11px;color:var(--azure);font-family:var(--mono);cursor:pointer}
 .select-all-row button:hover{text-decoration:underline}
+/* Custom items */
+.custom-section{margin-top:24px;border-top:1px solid var(--border);padding-top:20px}
+.custom-section h4{font-size:12px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;font-family:var(--mono)}
+.custom-items-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.custom-item-row{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 12px}
+.custom-item-row span{flex:1;font-size:13px;color:var(--fg1)}
+.custom-item-row button{background:none;border:none;color:var(--fg3);font-size:16px;cursor:pointer;line-height:1;padding:0 2px}
+.custom-item-row button:hover{color:#dc2626}
+.custom-add-row{display:flex;gap:8px}
+.custom-add-row input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-size:13px;color:var(--fg1);font-family:var(--sans)}
+.custom-add-row input::placeholder{color:var(--fg3)}
+.custom-add-row input:focus{outline:none;border-color:var(--azure)}
+.custom-add-row button{background:var(--azure);color:#fff;border:none;border-radius:6px;padding:9px 14px;font-size:12px;font-family:var(--mono);cursor:pointer;white-space:nowrap}
+.custom-add-row button:hover{opacity:.85}
+/* Flow frequency */
+.freq-row{background:var(--bg3);border-left:2px solid var(--azure);border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:7px 12px 7px 44px;display:flex;gap:6px;flex-wrap:wrap}
+.freq-btn{padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg2);color:var(--fg3);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .15s}
+.freq-btn.active{background:var(--azure);border-color:var(--azure);color:#fff}
+.freq-btn:hover:not(.active){border-color:var(--azure);color:var(--azure)}
+/* Persistence info */
+.persist-info{font-size:12px;color:var(--fg3);font-family:var(--mono);padding:10px 14px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);margin-top:12px;line-height:1.7}
+.persist-info strong{color:var(--fg2)}
 </style>
 </head>
 <body>
@@ -600,6 +622,10 @@ let st = {
   nature: {slider:50,rutina:null,decisiones:null,analisis:null},
   catOpen: {},
   grpOpen: {},
+  customCases: [],
+  customFlows: [],
+  customTools: [],
+  flowFreqs: {},
 };
 
 // Pre-open first 3 categories by default
@@ -677,6 +703,7 @@ function go(step){
 const APP = document.getElementById('app');
 
 function render(){
+  saveToLS();
   const steps = [null,'Perfil','Casos de uso','Flujos','Herramientas','Naturaleza','Resultados'];
   const topbarHtml = `
     <div class="topbar">
@@ -813,10 +840,18 @@ function renderCasos(){
   });
 
   const total = CASES.filter(c=>sectorMatch(c.secs,sec)).length;
+  html += `<div class="custom-section">
+    <h4>¿Tienes otros casos de uso?</h4>
+    ${st.customCases.length?`<div class="custom-items-list">${st.customCases.map((item,i)=>`<div class="custom-item-row"><span>${escH(item)}</span><button onclick="removeCustomItem('cases',${i})">×</button></div>`).join('')}</div>`:''}
+    <div class="custom-add-row">
+      <input type="text" id="custom-case-input" placeholder="Describe tu caso de uso adicional...">
+      <button onclick="addCustomItem('cases')">+ Agregar</button>
+    </div>
+  </div>`;
   html += `</div></div>
   <div class="nav-bar">
     <button class="btn btn-ghost" onclick="go(1)">← Atrás</button>
-    <span class="count">${st.selCases.size} / ${total} seleccionados</span>
+    <span class="count">${st.selCases.size + st.customCases.length} seleccionados</span>
     <button class="btn btn-primary" onclick="go(3)">Continuar → Flujos</button>
   </div>`;
   return html;
@@ -855,16 +890,24 @@ function renderFlujos(){
             <span class="item-id">${f.id}</span>
             <span class="item-name">${f.n}</span>
           </div>
-        </div>`).join('')}
+        </div>${st.selFlows.has(f.id)?buildFreqBar(f.id):''}`).join('')}
       </div>`:``}
     </div>`;
   });
 
   const total = FLOWS.filter(f=>sectorMatch(f.secs,sec)).length;
+  html += `<div class="custom-section">
+    <h4>¿Tienes otros flujos de trabajo?</h4>
+    ${st.customFlows.length?`<div class="custom-items-list">${st.customFlows.map((item,i)=>`<div class="custom-item-row"><span>${escH(item)}</span><button onclick="removeCustomItem('flows',${i})">×</button></div>`).join('')}</div>`:''}
+    <div class="custom-add-row">
+      <input type="text" id="custom-flow-input" placeholder="Describe tu flujo de trabajo adicional...">
+      <button onclick="addCustomItem('flows')">+ Agregar</button>
+    </div>
+  </div>`;
   html += `</div></div>
   <div class="nav-bar">
     <button class="btn btn-ghost" onclick="go(2)">← Atrás</button>
-    <span class="count">${st.selFlows.size} / ${total} seleccionados</span>
+    <span class="count">${st.selFlows.size + st.customFlows.length} seleccionados</span>
     <button class="btn btn-primary" onclick="go(4)">Continuar → Herramientas</button>
   </div>`;
   return html;
@@ -892,10 +935,18 @@ function renderHerramientas(){
     </div>`;
   });
 
+  html += `<div class="custom-section">
+    <h4>¿Usas alguna herramienta que no está en la lista?</h4>
+    ${st.customTools.length?`<div class="custom-items-list">${st.customTools.map((item,i)=>`<div class="custom-item-row"><span>${escH(item)}</span><button onclick="removeCustomItem('tools',${i})">×</button></div>`).join('')}</div>`:''}
+    <div class="custom-add-row">
+      <input type="text" id="custom-tool-input" placeholder="Ej: Salesforce, SAP, HubSpot, n8n...">
+      <button onclick="addCustomItem('tools')">+ Agregar</button>
+    </div>
+  </div>`;
   html += `</div></div>
   <div class="nav-bar">
     <button class="btn btn-ghost" onclick="go(3)">← Atrás</button>
-    <span class="count">${st.selTools.size} / 35 seleccionadas</span>
+    <span class="count">${st.selTools.size + st.customTools.length} seleccionadas</span>
     <button class="btn btn-primary" onclick="go(5)">Continuar → Naturaleza del trabajo</button>
   </div>`;
   return html;
@@ -1139,6 +1190,13 @@ function renderResultados(){
         <button class="btn btn-primary" onclick="copyShareLink()" title="Copia enlace con tu sesión codificada" id="share-btn">⬡ Copiar enlace</button>
       </div>
       <div id="export-msg" style="display:none;font-size:12px;color:var(--green);margin-top:10px;font-family:var(--mono)"></div>
+      <div class="persist-info">
+        <strong>¿Dónde quedan tus datos?</strong><br>
+        Tu progreso se guarda automáticamente en este navegador. Si cierras la pestaña y vuelves a esta URL, todo estará aquí. Para compartir o acceder desde otro dispositivo, usa <strong>⬡ Copiar enlace</strong>. Para enviar tus resultados a adaptative., usa el botón de abajo.
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn btn-secondary" id="submit-btn" onclick="submitResults()" style="width:100%;justify-content:center">⬆ Enviar resultados a adaptative.</button>
+      </div>
     </div>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:40px">
       <button class="btn btn-ghost" onclick="go(0)">← Nueva sesión</button>
@@ -1213,6 +1271,39 @@ function setNature(key, val){
   render();
 }
 
+function buildFreqBar(flowId){
+  const freqs=['diario','semanal','mensual','trimestral','anual'];
+  return `<div class="freq-row">${freqs.map(f=>`<button class="freq-btn ${st.flowFreqs[flowId]===f?'active':''}" onclick="event.stopPropagation();setFlowFreq('${flowId}','${f}')">${f}</button>`).join('')}</div>`;
+}
+
+function addCustomItem(type){
+  const ids={cases:'custom-case-input',flows:'custom-flow-input',tools:'custom-tool-input'};
+  const el=document.getElementById(ids[type]);
+  if(!el||!el.value.trim()) return;
+  const val=el.value.trim();
+  if(type==='cases') st.customCases.push(val);
+  else if(type==='flows') st.customFlows.push(val);
+  else st.customTools.push(val);
+  render();
+}
+
+function removeCustomItem(type,idx){
+  if(type==='cases') st.customCases.splice(idx,1);
+  else if(type==='flows') st.customFlows.splice(idx,1);
+  else st.customTools.splice(idx,1);
+  render();
+}
+
+function setFlowFreq(flowId,freq){
+  if(st.flowFreqs[flowId]===freq) delete st.flowFreqs[flowId];
+  else st.flowFreqs[flowId]=freq;
+  render();
+}
+
+function escH(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function renderSliderLabel(val){
   const el = document.getElementById('slider-label');
   st.nature.slider = parseInt(val);
@@ -1266,8 +1357,11 @@ function buildResultsPayload(){
     },
     seleccion: {
       casos: selCasesArr.map(c=>({id:c.id, nombre:c.n, naturaleza:c.nat})),
-      flujos: selFlowsArr.map(f=>({id:f.id, nombre:f.n})),
-      herramientas: selToolsArr.map(t=>({id:t.id, nombre:t.n}))
+      casos_propios: st.customCases,
+      flujos: selFlowsArr.map(f=>({id:f.id, nombre:f.n, frecuencia:st.flowFreqs[f.id]||null})),
+      flujos_propios: st.customFlows,
+      herramientas: selToolsArr.map(t=>({id:t.id, nombre:t.n})),
+      herramientas_propias: st.customTools
     },
     top10_agentes: top10.map((ag,i)=>({
       rank: i+1,
@@ -1327,10 +1421,23 @@ function exportMarkdown(){
   sel.casos.forEach(c=> md += `- \`${c.id}\` ${c.nombre}\n`);
 
   md += `\n## Flujos Seleccionados (${sel.flujos.length})\n`;
-  sel.flujos.forEach(f=> md += `- \`${f.id}\` ${f.nombre}\n`);
+  sel.flujos.forEach(f=> md += `- \`${f.id}\` ${f.nombre}${f.frecuencia?' · **'+f.frecuencia+'**':''}\n`);
+  if(sel.flujos_propios&&sel.flujos_propios.length){
+    md += `\n### Flujos Adicionales Propuestos\n`;
+    sel.flujos_propios.forEach(f=> md += `- ${f}\n`);
+  }
 
   md += `\n## Herramientas en Stack (${sel.herramientas.length})\n`;
   sel.herramientas.forEach(t=> md += `- \`${t.id}\` ${t.nombre}\n`);
+  if(sel.herramientas_propias&&sel.herramientas_propias.length){
+    md += `\n### Herramientas Adicionales Propuestas\n`;
+    sel.herramientas_propias.forEach(t=> md += `- ${t}\n`);
+  }
+
+  if(sel.casos_propios&&sel.casos_propios.length){
+    md += `\n## Casos de Uso Adicionales Propuestos\n`;
+    sel.casos_propios.forEach(c=> md += `- ${c}\n`);
+  }
 
   md += `\n---\n_Generado por adaptative. IA Selector · ${d.meta.metodologia}_\n`;
 
@@ -1352,7 +1459,11 @@ function copyShareLink(){
     c: [...st.selCases],
     f: [...st.selFlows],
     t: [...st.selTools],
-    n: st.nature
+    n: st.nature,
+    cc: st.customCases,
+    cf: st.customFlows,
+    ct: st.customTools,
+    ff: st.flowFreqs
   };
   try {
     const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
@@ -1372,6 +1483,81 @@ function showExportMsg(msg){
   if(el){ el.style.display='block'; el.textContent='✓ '+msg; setTimeout(()=>{ el.style.display='none'; },3500); }
 }
 
+// ═══════════════════════════════════════════════
+// PERSISTENCE — localStorage + remote submit
+// ═══════════════════════════════════════════════
+const LS_KEY = 'adaptative_ia_selector_v1';
+
+function saveToLS(){
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      step: st.step,
+      profile: st.profile,
+      selCases: [...st.selCases],
+      selFlows: [...st.selFlows],
+      selTools: [...st.selTools],
+      nature: st.nature,
+      customCases: st.customCases,
+      customFlows: st.customFlows,
+      customTools: st.customTools,
+      flowFreqs: st.flowFreqs,
+      savedAt: new Date().toISOString()
+    }));
+  } catch(e){}
+}
+
+function loadFromLS(){
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return false;
+    const d = JSON.parse(raw);
+    if(d.profile) st.profile = d.profile;
+    if(d.selCases) st.selCases = new Set(d.selCases);
+    if(d.selFlows) st.selFlows = new Set(d.selFlows);
+    if(d.selTools) st.selTools = new Set(d.selTools);
+    if(d.nature) st.nature = {...st.nature,...d.nature};
+    if(d.customCases) st.customCases = d.customCases;
+    if(d.customFlows) st.customFlows = d.customFlows;
+    if(d.customTools) st.customTools = d.customTools;
+    if(d.flowFreqs) st.flowFreqs = d.flowFreqs;
+    if(typeof d.step==='number') st.step = d.step;
+    return true;
+  } catch(e){ return false; }
+}
+
+function submitResults(){
+  const data = buildResultsPayload();
+  const btn = document.getElementById('submit-btn');
+  if(btn){ btn.textContent='Enviando...'; btn.disabled=true; }
+  fetch('https://formsubmit.co/ajax/andres.venegas@metalatam.com',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body: JSON.stringify({
+      _subject: 'IA Selector · '+(data.perfil.nombre||'Anónimo')+' — '+(data.perfil.empresa||'—'),
+      _replyto: data.perfil.email||'sin-email',
+      nombre: data.perfil.nombre,
+      empresa: data.perfil.empresa,
+      sector: data.perfil.sector,
+      rol: data.perfil.rol,
+      email: data.perfil.email,
+      naturaleza: data.naturaleza.clasificacion+' ('+data.naturaleza.score+'/100)',
+      top5_agentes: data.top10_agentes.slice(0,5).map(a=>a.rank+'. '+a.nombre+' ['+a.puntaje+'pts]').join(' | '),
+      casos: data.seleccion.casos.length+' del sistema + '+st.customCases.length+' propios',
+      flujos: data.seleccion.flujos.length+' del sistema + '+st.customFlows.length+' propios',
+      herramientas: data.seleccion.herramientas.length+' del sistema + '+st.customTools.length+' propias',
+      frecuencias_flujos: Object.entries(st.flowFreqs).map(([k,v])=>k+':'+v).join(', ')||'—',
+      items_propios: [...st.customCases.map(c=>'[caso] '+c),...st.customFlows.map(f=>'[flujo] '+f),...st.customTools.map(t=>'[herramienta] '+t)].join(' | ')||'—',
+      datos_completos: JSON.stringify(data,null,2)
+    })
+  }).then(r=>r.json()).then(()=>{
+    if(btn){btn.textContent='✓ Resultados enviados';btn.style.background='#10b981';btn.style.borderColor='#10b981';}
+    showExportMsg('Resultados enviados a adaptative. ✓');
+  }).catch(()=>{
+    if(btn){btn.textContent='⬆ Enviar resultados a adaptative.';btn.disabled=false;}
+    showExportMsg('Error al enviar. Descarga el JSON y envíalo por email.');
+  });
+}
+
 // Restore session from URL hash on load
 function tryRestoreSession(){
   try {
@@ -1384,6 +1570,10 @@ function tryRestoreSession(){
       if(saved.f) st.selFlows = new Set(saved.f);
       if(saved.t) st.selTools = new Set(saved.t);
       if(saved.n) st.nature = {...st.nature,...saved.n};
+      if(saved.cc) st.customCases = saved.cc;
+      if(saved.cf) st.customFlows = saved.cf;
+      if(saved.ct) st.customTools = saved.ct;
+      if(saved.ff) st.flowFreqs = saved.ff;
       st.step = 6; // jump to results
       return true;
     }
@@ -1394,7 +1584,7 @@ function tryRestoreSession(){
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
-tryRestoreSession();
+if(!tryRestoreSession()) loadFromLS();
 render();
 </script>
 </body>
