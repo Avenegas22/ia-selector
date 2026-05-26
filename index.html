@@ -1196,14 +1196,8 @@ function renderResultados(){
     </div>
 
     <div class="results-section">
-      <h3>Top 10 Agentes Recomendados <span class="tag">rankeados por puntaje · §8.3</span></h3>
-      <p style="font-size:12px;color:var(--fg3);margin-bottom:16px;font-family:var(--mono)">caso=+3pts · flujo=+2pts · herramienta=+1pt · naturaleza=+2pts · marcados = los que instalarás</p>
-      ${top10.length ? agentCards : '<div class="empty-state">Selecciona al menos un caso o flujo para recibir recomendaciones.</div>'}
-    </div>
-
-    <div class="results-section">
-      <h3>Todos los Agentes <span class="tag">${AGENTS.length} en el sistema · expande para seleccionar</span></h3>
-      <p style="font-size:12px;color:var(--fg3);margin-bottom:16px;font-family:var(--mono)">Los del Top 10 ya están marcados. Agrega o quita cualquiera de los 95 agentes disponibles.</p>
+      <h3>Agentes a Instalar <span class="tag">${st.selAgents.size} seleccionados · expande por familia</span></h3>
+      <p style="font-size:12px;color:var(--fg3);margin-bottom:16px;font-family:var(--mono)">Tu Top 10 ya está marcado. Agrega o quita cualquiera de los ${AGENTS.length} agentes disponibles.</p>
       ${Object.entries(FAMILIES).map(([famId,famName])=>{
         const famAgents = AGENTS.filter(ag=>ag.fam===famId);
         if(!famAgents.length) return '';
@@ -1229,6 +1223,12 @@ function renderResultados(){
             </div>`).join('')}</div>`:''}
         </div>`;
       }).join('')}
+    </div>
+
+    <div class="results-section">
+      <h3>Top 10 Recomendados <span class="tag">rankeados por puntaje · §8.3</span></h3>
+      <p style="font-size:12px;color:var(--fg3);margin-bottom:16px;font-family:var(--mono)">caso=+3pts · flujo=+2pts · herramienta=+1pt · naturaleza=+2pts</p>
+      ${top10.length ? agentCards : '<div class="empty-state">Selecciona al menos un caso o flujo para recibir recomendaciones.</div>'}
     </div>
 
     ${selCasesArr.length ? `<div class="results-section">
