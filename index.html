@@ -719,11 +719,6 @@ function scoreAgents(){
 // NAVIGATION
 // ═══════════════════════════════════════════════
 function go(step){
-  // Auto-seed selAgents with top 10 when arriving at results for the first time
-  if(step===6 && st.selAgents.size===0){
-    const ranked = scoreAgents();
-    ranked.slice(0,10).forEach(ag=>st.selAgents.add(ag.id));
-  }
   st.step = step;
   window.scrollTo(0,0);
   render();
@@ -736,17 +731,17 @@ const APP = document.getElementById('app');
 
 function render(){
   saveToLS();
-  const steps = [null,'Perfil','Casos de uso','Flujos','Herramientas','Naturaleza','Resultados'];
+  const steps = [null,'Perfil','Casos de uso','Agentes','Flujos','Herramientas','Naturaleza','Resultados'];
   const topbarHtml = `
     <div class="topbar">
       <span class="logo">adaptative<span class="dot">.</span></span>
-      <span class="step-label">${st.step>0&&st.step<6?`${st.step}/5 · ${steps[st.step]}`:st.step===6?'Tu Sistema':'IA Selector'}</span>
+      <span class="step-label">${st.step>0&&st.step<7?`${st.step}/6 · ${steps[st.step]}`:st.step===7?'Tu Sistema':'IA Selector'}</span>
     </div>`;
 
-  const progressHtml = st.step>0&&st.step<6 ? `
+  const progressHtml = st.step>0&&st.step<7 ? `
     <div class="progress-wrap">
       <div class="progress-steps" style="max-width:600px;margin:0 auto">
-        ${[1,2,3,4,5].map(i=>`<div class="ps ${i<st.step?'done':i===st.step?'active':''}"></div>`).join('')}
+        ${[1,2,3,4,5,6].map(i=>`<div class="ps ${i<st.step?'done':i===st.step?'active':''}"></div>`).join('')}
       </div>
     </div>` : '';
 
@@ -755,10 +750,11 @@ function render(){
     case 0: bodyHtml = renderWelcome(); break;
     case 1: bodyHtml = renderPerfil(); break;
     case 2: bodyHtml = renderCasos(); break;
-    case 3: bodyHtml = renderFlujos(); break;
-    case 4: bodyHtml = renderHerramientas(); break;
-    case 5: bodyHtml = renderNaturaleza(); break;
-    case 6: bodyHtml = renderResultados(); break;
+    case 3: bodyHtml = renderAgentes(); break;
+    case 4: bodyHtml = renderFlujos(); break;
+    case 5: bodyHtml = renderHerramientas(); break;
+    case 6: bodyHtml = renderNaturaleza(); break;
+    case 7: bodyHtml = renderResultados(); break;
   }
 
   APP.innerHTML = topbarHtml + progressHtml + bodyHtml;
@@ -772,7 +768,7 @@ function renderWelcome(){
       <div class="logo-big">adaptative<span class="dot">.</span></div>
       <div class="code-tag">adaptative.selector.init()</div>
       <h1>Tu <em>Sistema Operativo</em><br>de IA empieza aquí.</h1>
-      <p>5 pasos para mapear los flujos de trabajo donde la IA te genera más valor. El sistema analiza tu perfil y recomienda los agentes que instalar primero.</p>
+      <p>6 pasos para mapear tu perfil, seleccionar agentes, casos de uso, flujos y herramientas. El resultado: tu Sistema Operativo de IA listo para instalar.</p>
       <div class="pills">
         <span class="pill">95 agentes</span>
         <span class="pill">85 casos de uso</span>
@@ -890,12 +886,67 @@ function renderCasos(){
   <div class="nav-bar">
     <button class="btn btn-ghost" onclick="go(1)">← Atrás</button>
     <span class="count">${st.selCases.size + st.customCases.length} seleccionados</span>
-    <button class="btn btn-primary" onclick="go(3)">Continuar → Flujos</button>
+    <button class="btn btn-primary" onclick="go(3)">Continuar → Agentes</button>
   </div>`;
   return html;
 }
 
-// ── STEP 3: FLUJOS ──
+// ── STEP 3: AGENTES ──
+function renderAgentes(){
+  const sectors = st.profile.sectors || [];
+  const availableAgents = AGENTS.filter(ag=>sectorMatch(ag.secs, sectors));
+  const secLabel = sectors.length ? sectors.map(s=>s==='OTR'?(st.profile.sectorOtro||'Otro'):(SECTORS.find(x=>x.code===s)?.name||s)).join(', ') : '';
+
+  let html = `<div class="page"><div class="page-inner">
+    <div class="section-hd">
+      <h2>Agentes a instalar</h2>
+      <p>Selecciona los agentes de IA que quieres instalar en tu organización. ${secLabel?`Filtrado para <strong>${secLabel}</strong>.`:''}</p>
+    </div>
+    <div class="tip"><strong>Tip:</strong> Puedes marcar todos los que apliquen. Cada agente tiene un propósito específico — no son equivalentes.</div>`;
+
+  Object.entries(FAMILIES).forEach(([famId, famName])=>{
+    const items = availableAgents.filter(ag=>ag.fam===famId);
+    if(!items.length) return;
+    const selCount = items.filter(ag=>st.selAgents.has(ag.id)).length;
+    const open = !!st.agentFamOpen[famId];
+    html += `
+    <div class="cat-block">
+      <div class="cat-hd" onclick="toggleAgentFam('${famId}')">
+        <h3>${famName}</h3>
+        <div class="cat-meta">
+          ${selCount>0?`<span class="cat-count">${selCount} seleccionado${selCount>1?'s':''}</span>`:''}
+          <span class="cat-badge">${items.length}</span>
+          <span class="chevron ${open?'open':''}">▼</span>
+        </div>
+      </div>
+      ${open?`<div class="cat-body">
+        ${items.map(ag=>`
+        <div class="item-row ${st.selAgents.has(ag.id)?'selected':''}" onclick="toggleAgent('${ag.id}')">
+          <input type="checkbox" ${st.selAgents.has(ag.id)?'checked':''} onclick="event.stopPropagation();toggleAgent('${ag.id}')">
+          <div class="item-content">
+            <span class="item-id">${ag.id}</span>
+            <span class="item-name">${escH(ag.n)}</span>
+            <div class="item-badges">
+              ${natureBadge(ag.nat)}
+              ${ag.cac?'<span class="badge badge-cac">⚠ Cara-a-cliente</span>':''}
+            </div>
+            <span style="font-size:11px;color:var(--fg2);display:block;margin-top:2px;line-height:1.4">${escH(ag.purp)}</span>
+          </div>
+        </div>`).join('')}
+      </div>`:``}
+    </div>`;
+  });
+
+  html += `</div></div>
+  <div class="nav-bar">
+    <button class="btn btn-ghost" onclick="go(2)">← Atrás</button>
+    <span class="count">${st.selAgents.size} seleccionados</span>
+    <button class="btn btn-primary" onclick="go(4)">Continuar → Flujos</button>
+  </div>`;
+  return html;
+}
+
+// ── STEP 4: FLUJOS ──
 function renderFlujos(){
   const sectors = st.profile.sectors || [];
   const secLabel = sectors.length ? sectors.map(s=>s==='OTR'?(st.profile.sectorOtro||'Otro'):(SECTORS.find(x=>x.code===s)?.name||s)).join(', ') : '';
@@ -945,9 +996,9 @@ function renderFlujos(){
   </div>`;
   html += `</div></div>
   <div class="nav-bar">
-    <button class="btn btn-ghost" onclick="go(2)">← Atrás</button>
+    <button class="btn btn-ghost" onclick="go(3)">← Atrás</button>
     <span class="count">${st.selFlows.size + st.customFlows.length} seleccionados</span>
-    <button class="btn btn-primary" onclick="go(4)">Continuar → Herramientas</button>
+    <button class="btn btn-primary" onclick="go(5)">Continuar → Herramientas</button>
   </div>`;
   return html;
 }
@@ -984,9 +1035,9 @@ function renderHerramientas(){
   </div>`;
   html += `</div></div>
   <div class="nav-bar">
-    <button class="btn btn-ghost" onclick="go(3)">← Atrás</button>
+    <button class="btn btn-ghost" onclick="go(4)">← Atrás</button>
     <span class="count">${st.selTools.size + st.customTools.length} seleccionadas</span>
-    <button class="btn btn-primary" onclick="go(5)">Continuar → Naturaleza del trabajo</button>
+    <button class="btn btn-primary" onclick="go(6)">Continuar → Naturaleza del trabajo</button>
   </div>`;
   return html;
 }
@@ -1068,24 +1119,32 @@ function renderNaturaleza(){
 
   </div></div>
   <div class="nav-bar">
-    <button class="btn btn-ghost" onclick="go(4)">← Atrás</button>
+    <button class="btn btn-ghost" onclick="go(5)">← Atrás</button>
     <span class="count">${natInfo.lbl} · ${natScore}/100</span>
-    <button class="btn btn-primary" onclick="go(6)">Ver mi sistema →</button>
+    <button class="btn btn-primary" onclick="go(7)">Ver mi sistema →</button>
   </div>`;
 }
 
-// ── STEP 6: RESULTADOS ──
+// ── STEP 7: RESULTADOS ──
 function renderResultados(){
   const p = st.profile;
   const natScore = getNatureScore();
   const natInfo = getNatureLabel(natScore);
-  const ranked = scoreAgents();
-  const top10 = ranked.slice(0,10);
-  const maxScore = top10[0]?.score||1;
 
   const selCasesArr = CASES.filter(c=>st.selCases.has(c.id));
   const selFlowsArr = FLOWS.filter(f=>st.selFlows.has(f.id));
   const selToolsArr = TOOLS.filter(t=>st.selTools.has(t.id));
+  const selAgentsArr = AGENTS.filter(ag=>st.selAgents.has(ag.id));
+
+  const selSectors = p.sectors || [];
+  const sectorName = selSectors.length ? selSectors.map(s=>s==='OTR'?(p.sectorOtro||'Otro'):(SECTORS.find(x=>x.code===s)?.name||s)).join(', ') : '—';
+
+  // Agents by family
+  const agentsByFam = {};
+  selAgentsArr.forEach(ag=>{
+    if(!agentsByFam[ag.fam]) agentsByFam[ag.fam]=[];
+    agentsByFam[ag.fam].push(ag);
+  });
 
   // Cases by category
   const casesByCat = {};
@@ -1101,33 +1160,19 @@ function renderResultados(){
     flowsByGrp[f.grp].push(f);
   });
 
-  const agentCards = top10.map((ag,i)=>{
-    const isSel = st.selAgents.has(ag.id);
-    return `
-    <div class="agent-card ${ag.cac?'cac-card':''} ${isSel?'agent-selected':''}">
-      <div class="agent-top">
-        <div class="agent-info">
-          <div class="agent-rank">#${i+1} · ${ag.id} · ${FAMILIES[ag.fam]}</div>
-          <div class="agent-name">${ag.n}</div>
-          <div class="agent-purp">${ag.purp}</div>
-          <div class="agent-badges">
-            ${natureBadge(ag.nat)}
-            ${ag.cac?'<span class="badge badge-cac">⚠ Cara-a-cliente</span>':''}
-          </div>
-        </div>
-        <div class="score-wrap">
-          <div class="score-num">${ag.score}</div>
-          <div class="score-lbl">puntos</div>
-          <div style="margin-top:8px;text-align:right">
-            <label class="agent-sel-toggle ${isSel?'active':''}" onclick="event.preventDefault();toggleAgent('${ag.id}')">
-              <input type="checkbox" ${isSel?'checked':''} onclick="event.stopPropagation();toggleAgent('${ag.id}')">
-              ${isSel?'Incluido':'Incluir'}
-            </label>
-          </div>
-        </div>
-      </div>
-      <div class="score-bar-wrap"><div class="score-bar" style="width:${Math.round(ag.score/maxScore*100)}%"></div></div>
-      ${ag.cac?`<div class="cac-warning"><span>⚠</span><div><strong>Agente cara-a-cliente.</strong> Requiere Niveles 3-4 de la Escalera de Adopción (workflows + orquestación). No solo Niveles 1-2. ¿Está tu organización lista?</div></div>`:''}
+  const agentDetail = Object.keys(agentsByFam).map(famId=>{
+    const rows = agentsByFam[famId].map(ag=>`
+      <div class="detail-row">
+        <span class="detail-id">${ag.id}</span>
+        <span class="detail-name" style="flex:1">${ag.n}<span style="display:block;font-size:11px;color:var(--fg3);margin-top:1px">${ag.purp}</span></span>
+        <span style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+          ${natureBadge(ag.nat)}
+          ${ag.cac?'<span class="badge badge-cac">⚠ CAC</span>':''}
+        </span>
+      </div>`).join('');
+    return `<div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${FAMILIES[famId]||famId}</div>
+      <div class="detail-list">${rows}</div>
     </div>`;
   }).join('');
 
@@ -1150,7 +1195,7 @@ function renderResultados(){
     const rows = flowsByGrp[grpId].map(f=>`
       <div class="detail-row">
         <span class="detail-id">${f.id}</span>
-        <span class="detail-name">${f.n}</span>
+        <span class="detail-name">${f.n}${st.flowFreqs[f.id]?` <span style="font-size:10px;font-family:var(--mono);color:var(--azure);background:var(--azure-dim);padding:1px 6px;border-radius:4px;margin-left:6px">${st.flowFreqs[f.id]}</span>`:''}</span>
       </div>`).join('');
     return `<div style="margin-bottom:16px">
       <div style="font-size:12px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${grp?.name||grpId}</div>
@@ -1164,9 +1209,6 @@ function renderResultados(){
       <span class="detail-name">${t.n}</span>
       <span class="detail-badge">${TOOL_GROUPS.find(g=>g.id===t.grp)?.name||''}</span>
     </div>`).join('');
-
-  const selSectors = p.sectors || [];
-  const sectorName = selSectors.length ? selSectors.map(s=>s==='OTR'?(p.sectorOtro||'Otro'):(SECTORS.find(x=>x.code===s)?.name||s)).join(', ') : '—';
 
   return `<div class="page"><div class="page-inner">
 
@@ -1187,6 +1229,11 @@ function renderResultados(){
 
     <div class="summary-grid">
       <div class="sum-card">
+        <div class="sum-num">${st.selAgents.size}</div>
+        <div class="sum-lbl">Agentes a instalar</div>
+        <div class="sum-sub">de 95 disponibles</div>
+      </div>
+      <div class="sum-card">
         <div class="sum-num">${st.selCases.size}</div>
         <div class="sum-lbl">Casos de uso</div>
         <div class="sum-sub">de 85 disponibles</div>
@@ -1201,62 +1248,30 @@ function renderResultados(){
         <div class="sum-lbl">Herramientas</div>
         <div class="sum-sub">de 35 en el stack</div>
       </div>
-      <div class="sum-card">
-        <div class="sum-num">${st.selAgents.size}</div>
-        <div class="sum-lbl">Agentes seleccionados</div>
-        <div class="sum-sub">de ${ranked.length} compatibles · 95 total</div>
-      </div>
     </div>
 
-    <div class="results-section">
-      <h3>Agentes a Instalar <span class="tag">${st.selAgents.size} seleccionados · expande por familia</span></h3>
-      <p style="font-size:12px;color:var(--fg3);margin-bottom:16px;font-family:var(--mono)">Tu Top 10 ya está marcado. Agrega o quita cualquiera de los ${AGENTS.length} agentes disponibles.</p>
-      ${Object.entries(FAMILIES).map(([famId,famName])=>{
-        const famAgents = AGENTS.filter(ag=>ag.fam===famId);
-        if(!famAgents.length) return '';
-        const selCount = famAgents.filter(ag=>st.selAgents.has(ag.id)).length;
-        const isOpen = !!st.agentFamOpen[famId];
-        return `<div class="agent-fam-block">
-          <div class="agent-fam-hd" onclick="toggleAgentFam('${famId}')">
-            <h4>${famName}</h4>
-            <div class="fam-meta">
-              ${selCount?`<span style="font-size:11px;font-family:var(--mono);color:var(--azure)">${selCount} sel.</span>`:''}
-              <span style="font-size:11px;font-family:var(--mono);color:var(--fg3)">${famAgents.length} agentes</span>
-              <span class="chevron ${isOpen?'open':''}">▾</span>
-            </div>
-          </div>
-          ${isOpen?`<div class="agent-fam-body">${famAgents.map(ag=>`
-            <div class="agent-row-item ${st.selAgents.has(ag.id)?'sel-agent':''}" onclick="toggleAgent('${ag.id}')">
-              <input type="checkbox" ${st.selAgents.has(ag.id)?'checked':''} onclick="event.stopPropagation();toggleAgent('${ag.id}')">
-              <span class="agent-row-id">${ag.id}</span>
-              <span class="agent-row-name">${escH(ag.n)}</span>
-              <span class="agent-row-purp">${escH(ag.purp)}</span>
-              ${natureBadge(ag.nat)}
-              ${ag.cac?'<span class="badge badge-cac" title="Cara-a-cliente">👤</span>':''}
-            </div>`).join('')}</div>`:''}
-        </div>`;
-      }).join('')}
-    </div>
-
-    <div class="results-section">
-      <h3>Top 10 Recomendados <span class="tag">rankeados por puntaje · §8.3</span></h3>
-      <p style="font-size:12px;color:var(--fg3);margin-bottom:16px;font-family:var(--mono)">caso=+3pts · flujo=+2pts · herramienta=+1pt · naturaleza=+2pts</p>
-      ${top10.length ? agentCards : '<div class="empty-state">Selecciona al menos un caso o flujo para recibir recomendaciones.</div>'}
-    </div>
+    ${selAgentsArr.length ? `<div class="results-section">
+      <h3>Agentes Seleccionados <span class="tag">${st.selAgents.size} agentes</span></h3>
+      ${agentDetail}
+      ${st.customCases.length ? `<div style="margin-top:8px"><div style="font-size:12px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Agentes adicionales propuestos</div><div class="detail-list">${st.customCases.map(a=>`<div class="detail-row"><span class="detail-name">${escH(a)}</span></div>`).join('')}</div></div>` : ''}
+    </div>` : '<div class="results-section"><div class="empty-state">No seleccionaste agentes. <a href="#" onclick="go(3);return false">Volver al paso de agentes</a></div></div>'}
 
     ${selCasesArr.length ? `<div class="results-section">
       <h3>Casos de Uso Seleccionados <span class="tag">${st.selCases.size} casos</span></h3>
       ${caseDetail}
+      ${st.customCases.length ? `<div style="margin-top:8px"><div style="font-size:12px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Propuestos por el usuario</div><div class="detail-list">${st.customCases.map(c=>`<div class="detail-row"><span class="detail-name">${escH(c)}</span></div>`).join('')}</div></div>` : ''}
     </div>` : ''}
 
     ${selFlowsArr.length ? `<div class="results-section">
       <h3>Flujos de Trabajo Seleccionados <span class="tag">${st.selFlows.size} flujos</span></h3>
       ${flowDetail}
+      ${st.customFlows.length ? `<div style="margin-top:8px"><div style="font-size:12px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Propuestos por el usuario</div><div class="detail-list">${st.customFlows.map(f=>`<div class="detail-row"><span class="detail-name">${escH(f)}</span></div>`).join('')}</div></div>` : ''}
     </div>` : ''}
 
     ${selToolsArr.length ? `<div class="results-section">
       <h3>Herramientas en Tu Stack <span class="tag">${st.selTools.size} herramientas</span></h3>
-      <div class="detail-list">${toolRows||'<div class="empty-state">Ninguna seleccionada.</div>'}</div>
+      <div class="detail-list">${toolRows}</div>
+      ${st.customTools.length ? `<div style="margin-top:8px"><div style="font-size:12px;font-weight:600;color:var(--fg3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Propuestas por el usuario</div><div class="detail-list">${st.customTools.map(t=>`<div class="detail-row"><span class="detail-name">${escH(t)}</span></div>`).join('')}</div></div>` : ''}
     </div>` : ''}
 
     <div class="divider"></div>
@@ -1271,7 +1286,7 @@ function renderResultados(){
       <div id="export-msg" style="display:none;font-size:12px;color:var(--green);margin-top:10px;font-family:var(--mono)"></div>
       <div class="persist-info">
         <strong>¿Dónde quedan tus datos?</strong><br>
-        Tu progreso se guarda automáticamente en este navegador. Si cierras la pestaña y vuelves a esta URL, todo estará aquí. Para compartir o acceder desde otro dispositivo, usa <strong>⬡ Copiar enlace</strong>. Para enviar tus resultados a adaptative., usa el botón de abajo.
+        Tu progreso se guarda automáticamente en este navegador. Para compartir o acceder desde otro dispositivo usa <strong>⬡ Copiar enlace</strong>. Para enviar a adaptative., usa el botón de abajo.
       </div>
       <div style="margin-top:12px">
         <button class="btn btn-secondary" id="submit-btn" onclick="submitResults()" style="width:100%;justify-content:center">⬆ Enviar resultados a adaptative.</button>
@@ -1279,7 +1294,7 @@ function renderResultados(){
     </div>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:40px">
       <button class="btn btn-ghost" onclick="go(0)">← Nueva sesión</button>
-      <button class="btn btn-secondary" onclick="go(1)">✏ Editar perfil</button>
+      <button class="btn btn-secondary" onclick="go(3)">✏ Editar agentes</button>
     </div>
 
     <div style="text-align:center;font-size:11px;color:var(--fg3);margin-bottom:40px;font-family:var(--mono)">
@@ -1421,8 +1436,6 @@ function buildResultsPayload(){
   const p = st.profile;
   const natScore = getNatureScore();
   const natInfo = getNatureLabel(natScore);
-  const ranked = scoreAgents();
-  const top10 = ranked.slice(0,10);
   const selCasesArr = CASES.filter(c=>st.selCases.has(c.id));
   const selFlowsArr = FLOWS.filter(f=>st.selFlows.has(f.id));
   const selToolsArr = TOOLS.filter(t=>st.selTools.has(t.id));
@@ -1455,16 +1468,6 @@ function buildResultsPayload(){
       herramientas: selToolsArr.map(t=>({id:t.id, nombre:t.n})),
       herramientas_propias: st.customTools
     },
-    top10_agentes: top10.map((ag,i)=>({
-      rank: i+1,
-      id: ag.id,
-      nombre: ag.n,
-      familia: FAMILIES[ag.fam]||ag.fam,
-      naturaleza: ag.nat,
-      cara_a_cliente: ag.cac,
-      proposito: ag.purp,
-      puntaje: ag.score
-    })),
     agentes_seleccionados: [...st.selAgents].map(id=>{
       const ag = AGENTS.find(a=>a.id===id);
       if(!ag) return null;
@@ -1491,8 +1494,6 @@ function exportMarkdown(){
   const p = d.perfil;
   const nat = d.naturaleza;
   const sel = d.seleccion;
-  const top = d.top10_agentes;
-
   let md = `# IA Selector · adaptative.\n`;
   md += `> ${d.meta.version} · ${new Date().toLocaleDateString('es-CO')}\n\n`;
   md += `---\n\n`;
@@ -1506,15 +1507,6 @@ function exportMarkdown(){
   md += `\n## Naturaleza del Trabajo\n`;
   md += `**Clasificación:** ${nat.clasificacion} (score ${nat.score}/100)\n\n`;
 
-  md += `## Top 10 Agentes Recomendados\n\n`;
-  top.forEach(ag=>{
-    const marked = d.agentes_seleccionados && d.agentes_seleccionados.some(a=>a.id===ag.id);
-    md += `### ${marked?'✅ ':''}#${ag.rank} · ${ag.nombre}\n`;
-    md += `- **ID:** ${ag.id}  |  **Familia:** ${ag.familia}  |  **Puntaje:** ${ag.puntaje}\n`;
-    md += `- **Naturaleza:** ${ag.naturaleza}  |  **Cara-a-cliente:** ${ag.cara_a_cliente?'⚠ Sí (requiere Niveles 3-4)':'No'}\n`;
-    md += `- **Propósito:** ${ag.proposito}\n\n`;
-  });
-
   if(d.agentes_seleccionados && d.agentes_seleccionados.length){
     md += `## Agentes Seleccionados para Instalar (${d.agentes_seleccionados.length})\n\n`;
     const byFam = {};
@@ -1524,7 +1516,7 @@ function exportMarkdown(){
     });
     Object.entries(byFam).forEach(([fam,ags])=>{
       md += `### ${fam}\n`;
-      ags.forEach(ag=> md += `- \`${ag.id}\` **${ag.nombre}** — ${ag.proposito}\n`);
+      ags.forEach(ag=> md += `- \`${ag.id}\` **${ag.nombre}** — ${ag.proposito}${ag.cara_a_cliente?' ⚠ cara-a-cliente':''}\n`);
       md += `\n`;
     });
   }
@@ -1685,7 +1677,7 @@ function tryRestoreSession(){
       if(saved.ct) st.customTools = saved.ct;
       if(saved.ff) st.flowFreqs = saved.ff;
       if(saved.sa) st.selAgents = new Set(saved.sa);
-      st.step = 6; // jump to results
+      st.step = 7; // jump to results
       return true;
     }
   } catch(e){ /* ignore */ }
