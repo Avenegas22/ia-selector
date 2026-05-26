@@ -263,6 +263,7 @@ const SECTORS = [
   {code:'TRA',name:'Transporte'},
   {code:'EDU',name:'Educación'},
   {code:'CON',name:'Consultoría'},
+  {code:'OTR',name:'Otro'},
 ];
 
 const FAMILIES = {
@@ -635,7 +636,7 @@ const AGENTS=[
 // ═══════════════════════════════════════════════
 let st = {
   step: 0,
-  profile: {nombre:'',rol:'',empresa:'',email:'',sector:''},
+  profile: {nombre:'',rol:'',empresa:'',email:'',sectors:[],sectorOtro:''},
   selCases: new Set(),
   selFlows: new Set(),
   selTools: new Set(),
@@ -657,9 +658,13 @@ FLOW_GROUPS.forEach((g,i)=>{ st.grpOpen[g.id] = i<3; });
 // ═══════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════
-function sectorMatch(secs, sector){
-  if(!sector) return true;
-  return secs.includes('ALL') || secs.includes(sector);
+function sectorMatch(secs, sectors){
+  // sectors is now an array; empty = show all
+  if(!sectors || sectors.length===0) return true;
+  if(secs.includes('ALL')) return true;
+  // OTR matches everything
+  if(sectors.includes('OTR')) return true;
+  return sectors.some(s=>secs.includes(s));
 }
 
 function natureBadge(nat){
@@ -690,12 +695,12 @@ function getNatureLabel(score){
 }
 
 function scoreAgents(){
-  const sec = st.profile.sector;
+  const sectors = st.profile.sectors || [];
   const natScore = getNatureScore();
   const natInfo = getNatureLabel(natScore);
   return AGENTS.map(ag=>{
     // Hard filter: sector
-    if(!sectorMatch(ag.secs, sec)) return null;
+    if(!sectorMatch(ag.secs, sectors)) return null;
     let score = 0;
     // Cases: +3
     ag.cs.forEach(c=>{ if(st.selCases.has(c)) score+=3; });
@@ -773,7 +778,7 @@ function renderWelcome(){
         <span class="pill">85 casos de uso</span>
         <span class="pill">68 flujos</span>
         <span class="pill">35 herramientas</span>
-        <span class="pill">8 sectores</span>
+        <span class="pill">9 sectores</span>
       </div>
       <button class="btn btn-primary btn-lg" onclick="go(1)">Empezar levantamiento →</button>
     </div>
@@ -783,8 +788,10 @@ function renderWelcome(){
 // ── STEP 1: PERFIL ──
 function renderPerfil(){
   const p = st.profile;
+  const selSectors = p.sectors || [];
+  const hasOtr = selSectors.includes('OTR');
   const sectorGrid = SECTORS.map(s=>`
-    <div class="sector-card ${p.sector===s.code?'selected':''}" onclick="setSector('${s.code}')">
+    <div class="sector-card ${selSectors.includes(s.code)?'selected':''}" onclick="toggleSector('${s.code}')">
       <div class="code">${s.code}</div>
       <div class="name">${s.name}</div>
     </div>`).join('');
@@ -814,8 +821,11 @@ function renderPerfil(){
       </div>
     </div>
     <div class="form-group" style="margin-top:8px">
-      <label>Sector</label>
+      <label>Sector <span style="font-size:11px;color:var(--fg3);font-weight:400;text-transform:none;letter-spacing:0">(puedes marcar varios)</span></label>
       <div class="sector-grid">${sectorGrid}</div>
+      ${hasOtr ? `<div style="margin-top:10px">
+        <input type="text" id="inp-sector-otro" value="${escH(p.sectorOtro||'')}" placeholder="Escribe tu sector…" style="width:100%;background:var(--bg3);border:1px solid var(--border-az);color:var(--fg);font-family:var(--font);font-size:13px;padding:9px 14px;border-radius:var(--radius);outline:none" oninput="st.profile.sectorOtro=this.value">
+      </div>` : ''}
     </div>
     <div class="nav-bar">
       <div></div>
@@ -826,16 +836,17 @@ function renderPerfil(){
 
 // ── STEP 2: CASOS ──
 function renderCasos(){
-  const sec = st.profile.sector;
+  const sectors = st.profile.sectors || [];
+  const secLabel = sectors.length ? sectors.map(s=>s==='OTR'?(st.profile.sectorOtro||'Otro'):(SECTORS.find(x=>x.code===s)?.name||s)).join(', ') : '';
   let html = `<div class="page"><div class="page-inner">
     <div class="section-hd">
       <h2>Casos de uso</h2>
-      <p>Marca los que ocurren en tu día a día. ${sec?`Filtrado para <strong>${SECTORS.find(s=>s.code===sec).name}</strong>.`:''}</p>
+      <p>Marca los que ocurren en tu día a día. ${secLabel?`Filtrado para <strong>${secLabel}</strong>.`:''}</p>
     </div>
     <div class="tip"><strong>Tip:</strong> Puedes marcar todos los que apliquen. No hay límite.</div>`;
 
   CATEGORIES.forEach(cat=>{
-    const items = CASES.filter(c=>c.cat===cat.id && sectorMatch(c.secs, sec));
+    const items = CASES.filter(c=>c.cat===cat.id && sectorMatch(c.secs, sectors));
     if(!items.length) return;
     const selCount = items.filter(c=>st.selCases.has(c.id)).length;
     const open = st.catOpen[cat.id];
@@ -866,7 +877,7 @@ function renderCasos(){
     </div>`;
   });
 
-  const total = CASES.filter(c=>sectorMatch(c.secs,sec)).length;
+  const total = CASES.filter(c=>sectorMatch(c.secs,sectors)).length;
   html += `<div class="custom-section">
     <h4>¿Tienes otros casos de uso?</h4>
     ${st.customCases.length?`<div class="custom-items-list">${st.customCases.map((item,i)=>`<div class="custom-item-row"><span>${escH(item)}</span><button onclick="removeCustomItem('cases',${i})">×</button></div>`).join('')}</div>`:''}
@@ -886,16 +897,17 @@ function renderCasos(){
 
 // ── STEP 3: FLUJOS ──
 function renderFlujos(){
-  const sec = st.profile.sector;
+  const sectors = st.profile.sectors || [];
+  const secLabel = sectors.length ? sectors.map(s=>s==='OTR'?(st.profile.sectorOtro||'Otro'):(SECTORS.find(x=>x.code===s)?.name||s)).join(', ') : '';
   let html = `<div class="page"><div class="page-inner">
     <div class="section-hd">
       <h2>Flujos de trabajo</h2>
-      <p>Marca los flujos que ya ejecutas o quieres instalar. ${sec?`Filtrado para <strong>${SECTORS.find(s=>s.code===sec).name}</strong>.`:''}</p>
+      <p>Marca los flujos que ya ejecutas o quieres instalar. ${secLabel?`Filtrado para <strong>${secLabel}</strong>.`:''}</p>
     </div>
     <div class="tip"><strong>Tip:</strong> Los flujos son secuencias de pasos completas — desde el input hasta el entregable final.</div>`;
 
   FLOW_GROUPS.forEach(grp=>{
-    const items = FLOWS.filter(f=>f.grp===grp.id && sectorMatch(f.secs, sec));
+    const items = FLOWS.filter(f=>f.grp===grp.id && sectorMatch(f.secs, sectors));
     if(!items.length) return;
     const selCount = items.filter(f=>st.selFlows.has(f.id)).length;
     const open = st.grpOpen[grp.id];
@@ -922,7 +934,7 @@ function renderFlujos(){
     </div>`;
   });
 
-  const total = FLOWS.filter(f=>sectorMatch(f.secs,sec)).length;
+  const total = FLOWS.filter(f=>sectorMatch(f.secs,sectors)).length;
   html += `<div class="custom-section">
     <h4>¿Tienes otros flujos de trabajo?</h4>
     ${st.customFlows.length?`<div class="custom-items-list">${st.customFlows.map((item,i)=>`<div class="custom-item-row"><span>${escH(item)}</span><button onclick="removeCustomItem('flows',${i})">×</button></div>`).join('')}</div>`:''}
@@ -1153,7 +1165,8 @@ function renderResultados(){
       <span class="detail-badge">${TOOL_GROUPS.find(g=>g.id===t.grp)?.name||''}</span>
     </div>`).join('');
 
-  const sectorName = p.sector ? SECTORS.find(s=>s.code===p.sector)?.name : '—';
+  const selSectors = p.sectors || [];
+  const sectorName = selSectors.length ? selSectors.map(s=>s==='OTR'?(p.sectorOtro||'Otro'):(SECTORS.find(x=>x.code===s)?.name||s)).join(', ') : '—';
 
   return `<div class="page"><div class="page-inner">
 
@@ -1162,7 +1175,7 @@ function renderResultados(){
       <div class="r-meta">
         ${p.rol?`<span class="r-meta-item"><strong>${p.rol}</strong></span>`:''}
         ${p.empresa?`<span class="r-meta-item">@ ${p.empresa}</span>`:''}
-        ${p.sector?`<span class="r-meta-item">Sector: <strong>${sectorName}</strong></span>`:''}
+        ${sectorName!=='—'?`<span class="r-meta-item">Sector: <strong>${sectorName}</strong></span>`:''}
         ${p.email?`<span class="r-meta-item">${p.email}</span>`:''}
       </div>
       <div class="nature-gauge">
@@ -1283,8 +1296,11 @@ function attachEvents(){
   // Inputs are handled via oninput/onclick attributes inline
 }
 
-function setSector(code){
-  st.profile.sector = st.profile.sector===code ? '' : code;
+function toggleSector(code){
+  const s = st.profile.sectors || [];
+  const idx = s.indexOf(code);
+  if(idx>=0) s.splice(idx,1); else s.push(code);
+  st.profile.sectors = s;
   render();
 }
 
@@ -1420,7 +1436,7 @@ function buildResultsPayload(){
       nombre: p.nombre||'—',
       rol: p.rol||'—',
       empresa: p.empresa||'—',
-      sector: p.sector ? (SECTORS.find(s=>s.code===p.sector)?.name||p.sector) : '—',
+      sector: (p.sectors||[]).length ? (p.sectors||[]).map(s=>s==='OTR'?(p.sectorOtro||'Otro'):(SECTORS.find(x=>x.code===s)?.name||s)).join(', ') : '—',
       email: p.email||'—'
     },
     naturaleza: {
@@ -1609,7 +1625,14 @@ function loadFromLS(){
     const raw = localStorage.getItem(LS_KEY);
     if(!raw) return false;
     const d = JSON.parse(raw);
-    if(d.profile) st.profile = d.profile;
+    if(d.profile){
+      st.profile = d.profile;
+      // Migrate old single-sector string → array
+      if(typeof st.profile.sector === 'string' && st.profile.sector && !st.profile.sectors){
+        st.profile.sectors = [st.profile.sector];
+      }
+      if(!st.profile.sectors) st.profile.sectors = [];
+    }
     if(d.selCases) st.selCases = new Set(d.selCases);
     if(d.selFlows) st.selFlows = new Set(d.selFlows);
     if(d.selTools) st.selTools = new Set(d.selTools);
@@ -1648,7 +1671,11 @@ function tryRestoreSession(){
     if(hash.startsWith('#s=')){
       const raw = decodeURIComponent(escape(atob(hash.slice(3))));
       const saved = JSON.parse(raw);
-      if(saved.p) st.profile = saved.p;
+      if(saved.p){
+        st.profile = saved.p;
+        if(typeof st.profile.sector==='string' && st.profile.sector && !st.profile.sectors) st.profile.sectors=[st.profile.sector];
+        if(!st.profile.sectors) st.profile.sectors=[];
+      }
       if(saved.c) st.selCases = new Set(saved.c);
       if(saved.f) st.selFlows = new Set(saved.f);
       if(saved.t) st.selTools = new Set(saved.t);
