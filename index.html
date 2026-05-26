@@ -225,6 +225,26 @@ input[type="range"]{width:100%;accent-color:var(--azure);height:6px}
 /* Persistence info */
 .persist-info{font-size:12px;color:var(--fg3);font-family:var(--mono);padding:10px 14px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);margin-top:12px;line-height:1.7}
 .persist-info strong{color:var(--fg2)}
+/* Agent selection — card toggle */
+.agent-card.agent-selected{border-color:var(--border-az);background:rgba(59,130,246,0.04)}
+.agent-sel-toggle{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--fg3);cursor:pointer;margin-top:8px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:var(--bg3);transition:all .15s}
+.agent-sel-toggle:hover{border-color:var(--azure);color:var(--azure)}
+.agent-sel-toggle.active{border-color:var(--azure);color:var(--azure);background:var(--azure-dim)}
+.agent-sel-toggle input{accent-color:var(--azure);width:13px;height:13px;cursor:pointer}
+/* Agent family blocks */
+.agent-fam-block{margin-bottom:12px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.agent-fam-hd{background:var(--bg2);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.agent-fam-hd:hover{background:var(--bg3)}
+.agent-fam-hd h4{font-size:12px;font-weight:600;color:var(--fg);text-transform:uppercase;letter-spacing:.06em}
+.agent-fam-hd .fam-meta{display:flex;align-items:center;gap:10px}
+.agent-fam-body{padding:4px 0}
+.agent-row-item{display:flex;align-items:center;gap:12px;padding:7px 16px;cursor:pointer;transition:background .1s}
+.agent-row-item:hover{background:var(--bg3)}
+.agent-row-item.sel-agent{background:var(--azure-dim)}
+.agent-row-item input[type="checkbox"]{width:14px;height:14px;accent-color:var(--azure);flex-shrink:0;cursor:pointer}
+.agent-row-id{font-family:var(--mono);font-size:10px;color:var(--fg3);width:68px;flex-shrink:0}
+.agent-row-name{font-size:12px;color:var(--fg);font-weight:500;min-width:160px;flex-shrink:0}
+.agent-row-purp{font-size:11px;color:var(--fg3);flex:1;line-height:1.4}
 </style>
 </head>
 <body>
@@ -626,6 +646,8 @@ let st = {
   customFlows: [],
   customTools: [],
   flowFreqs: {},
+  selAgents: new Set(),
+  agentFamOpen: {},
 };
 
 // Pre-open first 3 categories by default
@@ -692,6 +714,11 @@ function scoreAgents(){
 // NAVIGATION
 // ═══════════════════════════════════════════════
 function go(step){
+  // Auto-seed selAgents with top 10 when arriving at results for the first time
+  if(step===6 && st.selAgents.size===0){
+    const ranked = scoreAgents();
+    ranked.slice(0,10).forEach(ag=>st.selAgents.add(ag.id));
+  }
   st.step = step;
   window.scrollTo(0,0);
   render();
@@ -1062,8 +1089,10 @@ function renderResultados(){
     flowsByGrp[f.grp].push(f);
   });
 
-  const agentCards = top10.map((ag,i)=>`
-    <div class="agent-card ${ag.cac?'cac-card':''}">
+  const agentCards = top10.map((ag,i)=>{
+    const isSel = st.selAgents.has(ag.id);
+    return `
+    <div class="agent-card ${ag.cac?'cac-card':''} ${isSel?'agent-selected':''}">
       <div class="agent-top">
         <div class="agent-info">
           <div class="agent-rank">#${i+1} · ${ag.id} · ${FAMILIES[ag.fam]}</div>
@@ -1077,11 +1106,18 @@ function renderResultados(){
         <div class="score-wrap">
           <div class="score-num">${ag.score}</div>
           <div class="score-lbl">puntos</div>
+          <div style="margin-top:8px;text-align:right">
+            <label class="agent-sel-toggle ${isSel?'active':''}" onclick="event.preventDefault();toggleAgent('${ag.id}')">
+              <input type="checkbox" ${isSel?'checked':''} onclick="event.stopPropagation();toggleAgent('${ag.id}')">
+              ${isSel?'Incluido':'Incluir'}
+            </label>
+          </div>
         </div>
       </div>
       <div class="score-bar-wrap"><div class="score-bar" style="width:${Math.round(ag.score/maxScore*100)}%"></div></div>
       ${ag.cac?`<div class="cac-warning"><span>⚠</span><div><strong>Agente cara-a-cliente.</strong> Requiere Niveles 3-4 de la Escalera de Adopción (workflows + orquestación). No solo Niveles 1-2. ¿Está tu organización lista?</div></div>`:''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   const caseDetail = Object.keys(casesByCat).map(catId=>{
     const cat = CATEGORIES.find(c=>c.id===catId);
@@ -1153,16 +1189,46 @@ function renderResultados(){
         <div class="sum-sub">de 35 en el stack</div>
       </div>
       <div class="sum-card">
-        <div class="sum-num">${ranked.length}</div>
-        <div class="sum-lbl">Agentes compatibles</div>
-        <div class="sum-sub">con tu sector</div>
+        <div class="sum-num">${st.selAgents.size}</div>
+        <div class="sum-lbl">Agentes seleccionados</div>
+        <div class="sum-sub">de ${ranked.length} compatibles · 95 total</div>
       </div>
     </div>
 
     <div class="results-section">
       <h3>Top 10 Agentes Recomendados <span class="tag">rankeados por puntaje · §8.3</span></h3>
-      <p style="font-size:12px;color:var(--fg3);margin-bottom:16px;font-family:var(--mono)">caso=+3pts · flujo=+2pts · herramienta=+1pt · naturaleza=+2pts</p>
+      <p style="font-size:12px;color:var(--fg3);margin-bottom:16px;font-family:var(--mono)">caso=+3pts · flujo=+2pts · herramienta=+1pt · naturaleza=+2pts · marcados = los que instalarás</p>
       ${top10.length ? agentCards : '<div class="empty-state">Selecciona al menos un caso o flujo para recibir recomendaciones.</div>'}
+    </div>
+
+    <div class="results-section">
+      <h3>Todos los Agentes <span class="tag">${AGENTS.length} en el sistema · expande para seleccionar</span></h3>
+      <p style="font-size:12px;color:var(--fg3);margin-bottom:16px;font-family:var(--mono)">Los del Top 10 ya están marcados. Agrega o quita cualquiera de los 95 agentes disponibles.</p>
+      ${Object.entries(FAMILIES).map(([famId,famName])=>{
+        const famAgents = AGENTS.filter(ag=>ag.fam===famId);
+        if(!famAgents.length) return '';
+        const selCount = famAgents.filter(ag=>st.selAgents.has(ag.id)).length;
+        const isOpen = !!st.agentFamOpen[famId];
+        return `<div class="agent-fam-block">
+          <div class="agent-fam-hd" onclick="toggleAgentFam('${famId}')">
+            <h4>${famName}</h4>
+            <div class="fam-meta">
+              ${selCount?`<span style="font-size:11px;font-family:var(--mono);color:var(--azure)">${selCount} sel.</span>`:''}
+              <span style="font-size:11px;font-family:var(--mono);color:var(--fg3)">${famAgents.length} agentes</span>
+              <span class="chevron ${isOpen?'open':''}">▾</span>
+            </div>
+          </div>
+          ${isOpen?`<div class="agent-fam-body">${famAgents.map(ag=>`
+            <div class="agent-row-item ${st.selAgents.has(ag.id)?'sel-agent':''}" onclick="toggleAgent('${ag.id}')">
+              <input type="checkbox" ${st.selAgents.has(ag.id)?'checked':''} onclick="event.stopPropagation();toggleAgent('${ag.id}')">
+              <span class="agent-row-id">${ag.id}</span>
+              <span class="agent-row-name">${escH(ag.n)}</span>
+              <span class="agent-row-purp">${escH(ag.purp)}</span>
+              ${natureBadge(ag.nat)}
+              ${ag.cac?'<span class="badge badge-cac" title="Cara-a-cliente">👤</span>':''}
+            </div>`).join('')}</div>`:''}
+        </div>`;
+      }).join('')}
     </div>
 
     ${selCasesArr.length ? `<div class="results-section">
@@ -1256,6 +1322,16 @@ function toggleCat(id){
 
 function toggleGrp(id){
   st.grpOpen[id] = !st.grpOpen[id];
+  render();
+}
+
+function toggleAgent(id){
+  st.selAgents.has(id) ? st.selAgents.delete(id) : st.selAgents.add(id);
+  render();
+}
+
+function toggleAgentFam(famId){
+  st.agentFamOpen[famId] = !st.agentFamOpen[famId];
   render();
 }
 
@@ -1372,7 +1448,12 @@ function buildResultsPayload(){
       cara_a_cliente: ag.cac,
       proposito: ag.purp,
       puntaje: ag.score
-    }))
+    })),
+    agentes_seleccionados: [...st.selAgents].map(id=>{
+      const ag = AGENTS.find(a=>a.id===id);
+      if(!ag) return null;
+      return {id:ag.id, nombre:ag.n, familia:FAMILIES[ag.fam]||ag.fam, naturaleza:ag.nat, cara_a_cliente:ag.cac, proposito:ag.purp};
+    }).filter(Boolean)
   };
 }
 
@@ -1411,11 +1492,26 @@ function exportMarkdown(){
 
   md += `## Top 10 Agentes Recomendados\n\n`;
   top.forEach(ag=>{
-    md += `### #${ag.rank} · ${ag.nombre}\n`;
+    const marked = d.agentes_seleccionados && d.agentes_seleccionados.some(a=>a.id===ag.id);
+    md += `### ${marked?'✅ ':''}#${ag.rank} · ${ag.nombre}\n`;
     md += `- **ID:** ${ag.id}  |  **Familia:** ${ag.familia}  |  **Puntaje:** ${ag.puntaje}\n`;
     md += `- **Naturaleza:** ${ag.naturaleza}  |  **Cara-a-cliente:** ${ag.cara_a_cliente?'⚠ Sí (requiere Niveles 3-4)':'No'}\n`;
     md += `- **Propósito:** ${ag.proposito}\n\n`;
   });
+
+  if(d.agentes_seleccionados && d.agentes_seleccionados.length){
+    md += `## Agentes Seleccionados para Instalar (${d.agentes_seleccionados.length})\n\n`;
+    const byFam = {};
+    d.agentes_seleccionados.forEach(ag=>{
+      if(!byFam[ag.familia]) byFam[ag.familia]=[];
+      byFam[ag.familia].push(ag);
+    });
+    Object.entries(byFam).forEach(([fam,ags])=>{
+      md += `### ${fam}\n`;
+      ags.forEach(ag=> md += `- \`${ag.id}\` **${ag.nombre}** — ${ag.proposito}\n`);
+      md += `\n`;
+    });
+  }
 
   md += `## Casos de Uso Seleccionados (${sel.casos.length})\n`;
   sel.casos.forEach(c=> md += `- \`${c.id}\` ${c.nombre}\n`);
@@ -1463,7 +1559,8 @@ function copyShareLink(){
     cc: st.customCases,
     cf: st.customFlows,
     ct: st.customTools,
-    ff: st.flowFreqs
+    ff: st.flowFreqs,
+    sa: [...st.selAgents]
   };
   try {
     const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
@@ -1501,6 +1598,7 @@ function saveToLS(){
       customFlows: st.customFlows,
       customTools: st.customTools,
       flowFreqs: st.flowFreqs,
+      selAgents: [...st.selAgents],
       savedAt: new Date().toISOString()
     }));
   } catch(e){}
@@ -1520,6 +1618,7 @@ function loadFromLS(){
     if(d.customFlows) st.customFlows = d.customFlows;
     if(d.customTools) st.customTools = d.customTools;
     if(d.flowFreqs) st.flowFreqs = d.flowFreqs;
+    if(d.selAgents) st.selAgents = new Set(d.selAgents);
     if(typeof d.step==='number') st.step = d.step;
     return true;
   } catch(e){ return false; }
@@ -1529,29 +1628,13 @@ function submitResults(){
   const data = buildResultsPayload();
   const btn = document.getElementById('submit-btn');
   if(btn){ btn.textContent='Enviando...'; btn.disabled=true; }
-  fetch('https://formsubmit.co/ajax/andres.venegas@metalatam.com',{
+  fetch('https://script.google.com/macros/s/AKfycbzQlFCzjHVHAVnRPJs_tMUIl5zarv3sy0MoflSAKLKB0j57g3rU4DSt3nS_6WV0mUyYFQ/exec',{
     method:'POST',
-    headers:{'Content-Type':'application/json','Accept':'application/json'},
-    body: JSON.stringify({
-      _subject: 'IA Selector · '+(data.perfil.nombre||'Anónimo')+' — '+(data.perfil.empresa||'—'),
-      _replyto: data.perfil.email||'sin-email',
-      nombre: data.perfil.nombre,
-      empresa: data.perfil.empresa,
-      sector: data.perfil.sector,
-      rol: data.perfil.rol,
-      email: data.perfil.email,
-      naturaleza: data.naturaleza.clasificacion+' ('+data.naturaleza.score+'/100)',
-      top5_agentes: data.top10_agentes.slice(0,5).map(a=>a.rank+'. '+a.nombre+' ['+a.puntaje+'pts]').join(' | '),
-      casos: data.seleccion.casos.length+' del sistema + '+st.customCases.length+' propios',
-      flujos: data.seleccion.flujos.length+' del sistema + '+st.customFlows.length+' propios',
-      herramientas: data.seleccion.herramientas.length+' del sistema + '+st.customTools.length+' propias',
-      frecuencias_flujos: Object.entries(st.flowFreqs).map(([k,v])=>k+':'+v).join(', ')||'—',
-      items_propios: [...st.customCases.map(c=>'[caso] '+c),...st.customFlows.map(f=>'[flujo] '+f),...st.customTools.map(t=>'[herramienta] '+t)].join(' | ')||'—',
-      datos_completos: JSON.stringify(data,null,2)
-    })
-  }).then(r=>r.json()).then(()=>{
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  }).then(r=>r.json()).then(res=>{
     if(btn){btn.textContent='✓ Resultados enviados';btn.style.background='#10b981';btn.style.borderColor='#10b981';}
-    showExportMsg('Resultados enviados a adaptative. ✓');
+    showExportMsg('Resultados guardados en Google Sheets ✓');
   }).catch(()=>{
     if(btn){btn.textContent='⬆ Enviar resultados a adaptative.';btn.disabled=false;}
     showExportMsg('Error al enviar. Descarga el JSON y envíalo por email.');
@@ -1574,6 +1657,7 @@ function tryRestoreSession(){
       if(saved.cf) st.customFlows = saved.cf;
       if(saved.ct) st.customTools = saved.ct;
       if(saved.ff) st.flowFreqs = saved.ff;
+      if(saved.sa) st.selAgents = new Set(saved.sa);
       st.step = 6; // jump to results
       return true;
     }
