@@ -17,9 +17,9 @@ export class SiigoClient {
    * @param {{username?: string, accessKey?: string, partnerId?: string, baseUrl?: string, fetchImpl?: typeof fetch}} cfg
    */
   constructor(cfg) {
-    this.username = cfg.username;
-    this.accessKey = cfg.accessKey;
-    this.partnerId = cfg.partnerId;
+    this.username = clean(cfg.username);
+    this.accessKey = clean(cfg.accessKey);
+    this.partnerId = clean(cfg.partnerId);
     this.baseUrl = (cfg.baseUrl || "https://api.siigo.com").replace(/\/+$/, "");
     this.fetch = cfg.fetchImpl || globalThis.fetch;
     this.token = null;
@@ -34,11 +34,20 @@ export class SiigoClient {
     return missing;
   }
 
+  configProblems() {
+    const problems = this.missingConfig().map((k) => `Falta ${k}`);
+    // Siigo rejects anything but plain alphanumerics (even a hyphen) with invalid_partner_id.
+    if (this.partnerId && !/^[A-Za-z0-9]{3,100}$/.test(this.partnerId)) {
+      problems.push("El Partner-Id debe tener 3–100 caracteres alfanuméricos, sin espacios, guiones ni tildes");
+    }
+    return problems;
+  }
+
   async #authenticate() {
-    const missing = this.missingConfig();
-    if (missing.length) {
+    const problems = this.configProblems();
+    if (problems.length) {
       throw new SiigoError(
-        `Faltan credenciales de Siigo: ${missing.join(", ")}. Ejecuta /siigo-nube:setup para configurarlas.`,
+        `Configuración de Siigo incompleta: ${problems.join("; ")}. Revisa la configuración de la extensión/plugin (usuario API, access key y Partner-Id).`,
         0,
       );
     }
@@ -70,7 +79,7 @@ export class SiigoClient {
   /**
    * @param {"GET"|"POST"|"PUT"|"DELETE"} method
    * @param {string} path e.g. "/v1/invoices"
-   * @param {{query?: Record<string, any>, body?: any}} [opts]
+   * @param {{query?: Record<string, any>, body?: any, headers?: Record<string, string>}} [opts]
    */
   async request(method, path, opts = {}) {
     const url = new URL(this.baseUrl + path);
@@ -87,6 +96,7 @@ export class SiigoClient {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
           "Partner-Id": this.partnerId,
+          ...(opts.headers || {}),
         },
         body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
       });
@@ -117,8 +127,8 @@ export class SiigoClient {
     return this.request("GET", path, { query });
   }
 
-  post(path, body) {
-    return this.request("POST", path, { body });
+  post(path, body, headers) {
+    return this.request("POST", path, { body, headers });
   }
 
   /**
@@ -143,6 +153,15 @@ export class SiigoClient {
   }
 }
 
+// Unset user_config values can arrive as an empty string or as the literal
+// placeholder, depending on the host. Treat both as missing.
+function clean(v) {
+  if (v === undefined || v === null) return undefined;
+  const s = String(v).trim();
+  if (!s || /^\$\{.*\}$/.test(s)) return undefined;
+  return s;
+}
+
 async function readBody(res) {
   const text = await res.text();
   if (!text) return null;
@@ -153,8 +172,10 @@ async function readBody(res) {
   }
 }
 
+// Siigo documents PascalCase keys (Errors/Code/Message) but some responses
+// use lowercase, so read both.
 function summariseErrors(body) {
-  const errors = body?.Errors || body?.errors;
+  const errors = body?.Errors || body?.errors || body?.error?.errors;
   if (!Array.isArray(errors) || errors.length === 0) return null;
   return errors
     .map((e) => [e.Code || e.code, e.Message || e.message].filter(Boolean).join(": "))

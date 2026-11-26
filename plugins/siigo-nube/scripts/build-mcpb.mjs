@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds dist/siigo-nube-<version>.mcpb — the one-file Claude Desktop extension.
+// Builds dist/siigo-nube.mcpb — the one-file Claude Desktop extension.
 //
 //   node scripts/build-mcpb.mjs
 //
@@ -17,7 +17,8 @@ const plugin = JSON.parse(readFileSync(join(root, ".claude-plugin/plugin.json"),
 const manifest = JSON.parse(readFileSync(join(root, "mcpb/manifest.json"), "utf8"));
 
 const stage = join(root, "dist", "mcpb-stage");
-const out = join(root, "dist", `siigo-nube-${plugin.version}.mcpb`);
+// Stable file name so .../releases/latest/download/siigo-nube.mcpb always works.
+const out = join(root, "dist", "siigo-nube.mcpb");
 rmSync(stage, { recursive: true, force: true });
 mkdirSync(stage, { recursive: true });
 

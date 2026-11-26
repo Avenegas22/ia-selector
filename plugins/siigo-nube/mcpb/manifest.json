@@ -22,7 +22,9 @@
     "entry_point": "server/index.mjs",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/server/index.mjs"],
+      "args": [
+        "${__dirname}/server/index.mjs"
+      ],
       "env": {
         "SIIGO_USERNAME": "${user_config.siigo_username}",
         "SIIGO_ACCESS_KEY": "${user_config.siigo_access_key}",
@@ -32,17 +34,30 @@
     }
   },
   "tools": [],
-  "keywords": ["siigo", "contabilidad", "facturacion electronica", "dian", "colombia", "erp"],
+  "keywords": [
+    "siigo",
+    "contabilidad",
+    "facturacion electronica",
+    "dian",
+    "colombia",
+    "erp"
+  ],
   "license": "MIT",
   "compatibility": {
-    "platforms": ["darwin", "win32", "linux"],
-    "runtimes": { "node": ">=18.0.0" }
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
   },
   "user_config": {
     "siigo_username": {
       "type": "string",
       "title": "Usuario API de Siigo",
-      "description": "El correo del usuario API creado en Siigo Nube (Configuración → Credenciales de integración / Alianzas).",
+      "description": "El correo del usuario API que muestra Siigo Nube en Configuración → Alianzas e integraciones → Credenciales de integración (Siigo API).",
       "required": true
     },
     "siigo_access_key": {
@@ -55,9 +70,8 @@
     "siigo_partner_id": {
       "type": "string",
       "title": "Partner-Id",
-      "description": "Identificador de la integración que Siigo exige en cada llamada. Déjalo como está salvo que tu proveedor te indique otro.",
-      "default": "adaptativeSiigoNube",
-      "required": false
+      "description": "El Partner-Id que Siigo asigna al registrar la aplicación (Siigo Nube → Credenciales de integración → Añadir aplicación). Solo letras y números.",
+      "required": true
     },
     "read_only": {
       "type": "boolean",

@@ -10,12 +10,27 @@
   "homepage": "https://adaptativeos.com",
   "repository": "https://github.com/Avenegas22/ia-selector",
   "license": "MIT",
-  "keywords": ["siigo", "contabilidad", "facturacion-electronica", "dian", "colombia", "erp", "mcp"],
+  "keywords": [
+    "siigo",
+    "contabilidad",
+    "facturacion-electronica",
+    "dian",
+    "colombia",
+    "erp",
+    "mcp"
+  ],
+  "icon": "./mcpb/icon.png",
+  "network": {
+    "hosts": [
+      "api.siigo.com",
+      "reportsexcelprod.blob.core.windows.net"
+    ]
+  },
   "userConfig": {
     "siigo_username": {
       "type": "string",
       "title": "Usuario API de Siigo",
-      "description": "El usuario (correo) del usuario API creado en Siigo Nube → Configuración → Credenciales de integración.",
+      "description": "El correo del usuario API que muestra Siigo Nube en Configuración → Alianzas e integraciones → Credenciales de integración (Siigo API).",
       "required": true
     },
     "siigo_access_key": {
@@ -28,14 +43,13 @@
     "siigo_partner_id": {
       "type": "string",
       "title": "Partner-Id",
-      "description": "Identificador de tu integración que Siigo exige en el encabezado Partner-Id (alfanumérico, sin espacios).",
-      "default": "adaptativeSiigoNube",
+      "description": "El Partner-Id que Siigo asigna al registrar la aplicación (Siigo Nube → Credenciales de integración → Añadir aplicación). Solo letras y números.",
       "required": true
     },
     "read_only": {
       "type": "boolean",
       "title": "Modo solo lectura",
-      "description": "Si está activo, el servidor no expone herramientas que crean registros en Siigo (clientes, productos, facturas, recibos).",
+      "description": "Si está activo, el servidor no expone herramientas que crean registros en Siigo (terceros, productos, facturas, envío de correos).",
       "default": false
     }
   }
