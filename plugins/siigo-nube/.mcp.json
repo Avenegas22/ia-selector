@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "siigo": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server/index.mjs"],
+      "env": {
+        "SIIGO_USERNAME": "${user_config.siigo_username}",
+        "SIIGO_ACCESS_KEY": "${user_config.siigo_access_key}",
+        "SIIGO_PARTNER_ID": "${user_config.siigo_partner_id}",
+        "SIIGO_READ_ONLY": "${user_config.read_only}"
+      }
+    }
+  }
+}

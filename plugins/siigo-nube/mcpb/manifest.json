@@ -1,0 +1,70 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/mcpb/main/dist/mcpb-manifest-v0.3.schema.json",
+  "manifest_version": "0.3",
+  "name": "siigo-nube",
+  "display_name": "Siigo Nube",
+  "version": "0.0.0",
+  "description": "Conecta Claude con tu Siigo Nube: clientes, productos, facturas, cartera por edades y balance de prueba.",
+  "long_description": "Conector MCP para la API pública de Siigo Nube (Colombia). Consulta clientes, productos, facturas y catálogos; crea clientes, productos y facturas electrónicas con vista previa obligatoria y confirmación explícita antes de enviar nada a Siigo/DIAN; arma la cartera por edades y genera el balance de prueba.\n\nTus credenciales (usuario API y access key) se guardan en el llavero de tu sistema operativo y solo viajan entre tu computador y api.siigo.com. Nadie más — tampoco adaptative. — las ve.\n\nActiva \"Modo solo lectura\" si quieres que Claude solo consulte y nunca cree registros.",
+  "author": {
+    "name": "adaptative.",
+    "url": "https://adaptativeos.com"
+  },
+  "homepage": "https://adaptativeos.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Avenegas22/ia-selector"
+  },
+  "documentation": "https://github.com/Avenegas22/ia-selector/tree/main/plugins/siigo-nube#readme",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.mjs",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.mjs"],
+      "env": {
+        "SIIGO_USERNAME": "${user_config.siigo_username}",
+        "SIIGO_ACCESS_KEY": "${user_config.siigo_access_key}",
+        "SIIGO_PARTNER_ID": "${user_config.siigo_partner_id}",
+        "SIIGO_READ_ONLY": "${user_config.read_only}"
+      }
+    }
+  },
+  "tools": [],
+  "keywords": ["siigo", "contabilidad", "facturacion electronica", "dian", "colombia", "erp"],
+  "license": "MIT",
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": { "node": ">=18.0.0" }
+  },
+  "user_config": {
+    "siigo_username": {
+      "type": "string",
+      "title": "Usuario API de Siigo",
+      "description": "El correo del usuario API creado en Siigo Nube (Configuración → Credenciales de integración / Alianzas).",
+      "required": true
+    },
+    "siigo_access_key": {
+      "type": "string",
+      "title": "Access key de Siigo",
+      "description": "La llave de acceso generada para ese usuario API. Se guarda cifrada en el llavero del sistema.",
+      "sensitive": true,
+      "required": true
+    },
+    "siigo_partner_id": {
+      "type": "string",
+      "title": "Partner-Id",
+      "description": "Identificador de la integración que Siigo exige en cada llamada. Déjalo como está salvo que tu proveedor te indique otro.",
+      "default": "adaptativeSiigoNube",
+      "required": false
+    },
+    "read_only": {
+      "type": "boolean",
+      "title": "Modo solo lectura",
+      "description": "Si está activo, Claude solo puede consultar; no aparecen las herramientas que crean registros en Siigo.",
+      "default": false,
+      "required": false
+    }
+  }
+}

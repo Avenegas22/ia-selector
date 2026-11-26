@@ -1,0 +1,17 @@
+{
+  "name": "adaptative",
+  "owner": {
+    "name": "adaptative.",
+    "url": "https://adaptativeos.com"
+  },
+  "description": "Plugins de adaptative. para instalar el sistema operativo de IA sobre las herramientas que tu empresa ya usa.",
+  "plugins": [
+    {
+      "name": "siigo-nube",
+      "source": "./plugins/siigo-nube",
+      "description": "Opera Siigo Nube desde Claude Code: clientes, productos, facturación electrónica con confirmación, cartera por edades y balance de prueba.",
+      "category": "finance",
+      "keywords": ["siigo", "contabilidad", "facturacion-electronica", "dian", "colombia", "erp"]
+    }
+  ]
+}
