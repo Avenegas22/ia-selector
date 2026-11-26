@@ -8,7 +8,7 @@ Funciona en **Claude Desktop** (un archivo, doble clic) y en **Claude Code** (pl
 
 ## Instalar en Claude Desktop — para cualquier persona
 
-1. **Descarga** [`siigo-nube.mcpb`](https://github.com/Avenegas22/ia-selector/releases/latest/download/siigo-nube.mcpb).
+1. **Descarga** [`siigo-nube.mcpb`](https://github.com/Avenegas22/ia-selector/raw/main/downloads/siigo-nube.mcpb).
 2. **Ábrelo** con doble clic (o arrástralo a Claude Desktop → Configuración → Extensiones). Claude muestra qué hace la extensión y pide confirmar.
 3. **Completa los 3 datos de Siigo** (ver abajo cómo obtenerlos): usuario API, access key y Partner-Id. Activa *Modo solo lectura* si solo quieres consultar.
 4. Abre un chat nuevo y escribe: *"Verifica mi conexión con Siigo"*.
@@ -79,6 +79,6 @@ claude plugin validate . --strict  # valida el plugin
 
 Variables del servidor: `SIIGO_USERNAME`, `SIIGO_ACCESS_KEY`, `SIIGO_PARTNER_ID` (obligatorias), `SIIGO_READ_ONLY`, `SIIGO_OUTPUT_DIR`, `SIIGO_BASE_URL`.
 
-Publicar una versión: sube `version` en `.claude-plugin/plugin.json` (y `VERSION` en `server/index.mjs`), genera el `.mcpb` y adjúntalo como `siigo-nube.mcpb` a un release de GitHub.
+Publicar una versión: sube `version` en `.claude-plugin/plugin.json` (y `VERSION` en `server/index.mjs`), regenera la copia pública con `node scripts/build-mcpb.mjs ../../downloads/siigo-nube.mcpb` y haz merge a `main`. El link de descarga no cambia entre versiones. Opcional: adjunta el mismo archivo a un release de GitHub.
 
 Hecho por [adaptative.](https://adaptativeos.com) — Licencia MIT. No es un producto oficial de Siigo S.A.S.

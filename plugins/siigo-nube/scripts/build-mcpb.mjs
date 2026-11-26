@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Builds dist/siigo-nube.mcpb — the one-file Claude Desktop extension.
 //
-//   node scripts/build-mcpb.mjs
+//   node scripts/build-mcpb.mjs                                   → dist/siigo-nube.mcpb
+//   node scripts/build-mcpb.mjs ../../downloads/siigo-nube.mcpb   → public download copy
 //
 // Version comes from .claude-plugin/plugin.json so the Claude Code plugin and
 // the Desktop extension never drift. The manifest's `tools` list is generated
@@ -9,7 +10,7 @@
 
 import { spawn, execFileSync } from "node:child_process";
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -17,8 +18,9 @@ const plugin = JSON.parse(readFileSync(join(root, ".claude-plugin/plugin.json"),
 const manifest = JSON.parse(readFileSync(join(root, "mcpb/manifest.json"), "utf8"));
 
 const stage = join(root, "dist", "mcpb-stage");
-// Stable file name so .../releases/latest/download/siigo-nube.mcpb always works.
-const out = join(root, "dist", "siigo-nube.mcpb");
+mkdirSync(dirname(resolve(process.argv[2] || join(root, "dist", "x"))), { recursive: true });
+// Stable file name so shared download links never change between versions.
+const out = process.argv[2] ? resolve(process.argv[2]) : join(root, "dist", "siigo-nube.mcpb");
 rmSync(stage, { recursive: true, force: true });
 mkdirSync(stage, { recursive: true });
 
