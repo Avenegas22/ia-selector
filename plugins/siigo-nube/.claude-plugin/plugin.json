@@ -1,0 +1,56 @@
+{
+  "name": "siigo-nube",
+  "displayName": "Siigo Nube",
+  "version": "0.1.0",
+  "description": "Opera Siigo Nube desde Claude Code: consulta clientes, productos y facturas; crea facturas electrónicas con vista previa y confirmación explícita; arma la cartera por edades y genera el balance de prueba.",
+  "author": {
+    "name": "adaptative.",
+    "url": "https://adaptativeos.com"
+  },
+  "homepage": "https://adaptativeos.com",
+  "repository": "https://github.com/Avenegas22/ia-selector",
+  "license": "MIT",
+  "keywords": [
+    "siigo",
+    "contabilidad",
+    "facturacion-electronica",
+    "dian",
+    "colombia",
+    "erp",
+    "mcp"
+  ],
+  "icon": "./mcpb/icon.png",
+  "network": {
+    "hosts": [
+      "api.siigo.com",
+      "reportsexcelprod.blob.core.windows.net"
+    ]
+  },
+  "userConfig": {
+    "siigo_username": {
+      "type": "string",
+      "title": "Usuario API de Siigo",
+      "description": "El correo del usuario API que muestra Siigo Nube en Configuración → Alianzas e integraciones → Credenciales de integración (Siigo API).",
+      "required": true
+    },
+    "siigo_access_key": {
+      "type": "string",
+      "title": "Access key de Siigo",
+      "description": "La llave de acceso (access key) generada para ese usuario API. Se guarda cifrada, nunca en settings.json.",
+      "sensitive": true,
+      "required": true
+    },
+    "siigo_partner_id": {
+      "type": "string",
+      "title": "Partner-Id",
+      "description": "El Partner-Id que Siigo asigna al registrar la aplicación (Siigo Nube → Credenciales de integración → Añadir aplicación). Solo letras y números.",
+      "required": true
+    },
+    "read_only": {
+      "type": "boolean",
+      "title": "Modo solo lectura",
+      "description": "Si está activo, el servidor no expone herramientas que crean registros en Siigo (terceros, productos, facturas, envío de correos).",
+      "default": false
+    }
+  }
+}
